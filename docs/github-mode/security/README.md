@@ -16,4 +16,6 @@ These artifacts define:
 
 ## Approval process
 
-Maintainers should approve these security artifacts in pull request review before enabling Phase 1 and later implementation tasks.
+Phase 1 and later implementation tasks are enabled only after security artifact approvals are captured in-repo in the approval signoff blocks.
+
+- Phase 1 gate status: ✅ Satisfied (Task 0.3 threat model approvals captured on 2026-02-16).
