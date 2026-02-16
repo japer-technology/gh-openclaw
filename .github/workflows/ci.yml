@@ -37,6 +37,8 @@ jobs:
       run_node: ${{ steps.scope.outputs.run_node }}
       run_macos: ${{ steps.scope.outputs.run_macos }}
       run_android: ${{ steps.scope.outputs.run_android }}
+      github_mode_active: ${{ steps.scope.outputs.github_mode_active }}
+      run_installed_runtime_baseline: ${{ steps.scope.outputs.run_installed_runtime_baseline }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -57,17 +59,25 @@ jobs:
           fi
 
           CHANGED="$(git diff --name-only "$BASE" HEAD 2>/dev/null || echo "UNKNOWN")"
+
+          github_mode_active=false
+          if compgen -G ".GITHUB-MODE-ACTIVE.*" > /dev/null; then
+            github_mode_active=true
+          fi
           if [ "$CHANGED" = "UNKNOWN" ] || [ -z "$CHANGED" ]; then
             # Fail-safe: run broad checks if detection fails.
             echo "run_node=true" >> "$GITHUB_OUTPUT"
             echo "run_macos=true" >> "$GITHUB_OUTPUT"
             echo "run_android=true" >> "$GITHUB_OUTPUT"
+            echo "github_mode_active=${github_mode_active}" >> "$GITHUB_OUTPUT"
+            echo "run_installed_runtime_baseline=${github_mode_active}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           run_node=false
           run_macos=false
           run_android=false
+          run_installed_runtime_baseline=false
           has_non_docs=false
           has_non_native_non_docs=false
 
@@ -95,6 +105,14 @@ jobs:
             esac
 
             case "$path" in
+              .GITHUB-MODE-IMPLEMENTATION-TASKS.md|.GITHUB-MODE-ACTIVE.*|runtime/github/*|runtime/github/**/*|.github/workflows/github-mode*.yml|.github/workflows/github-mode*.yaml|.github/workflows/ci.yml|scripts/ci-installed-runtime-smoke.sh|.github/baselines/installed-runtime-smoke.json)
+                if [ "$github_mode_active" = true ]; then
+                  run_installed_runtime_baseline=true
+                fi
+                ;;
+            esac
+
+            case "$path" in
               src/*|test/*|extensions/*|packages/*|scripts/*|ui/*|.github/*|openclaw.mjs|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig*.json|vitest*.ts|tsdown.config.ts|.oxlintrc.json|.oxfmtrc.jsonc)
                 run_node=true
                 ;;
@@ -117,6 +135,26 @@ jobs:
           echo "run_node=${run_node}" >> "$GITHUB_OUTPUT"
           echo "run_macos=${run_macos}" >> "$GITHUB_OUTPUT"
           echo "run_android=${run_android}" >> "$GITHUB_OUTPUT"
+          echo "github_mode_active=${github_mode_active}" >> "$GITHUB_OUTPUT"
+          echo "run_installed_runtime_baseline=${run_installed_runtime_baseline}" >> "$GITHUB_OUTPUT"
+
+  installed-runtime-regression-baseline:
+    needs: [docs-scope, changed-scope, code-size, check-lint]
+    if: needs.docs-scope.outputs.docs_only != 'true' && needs.changed-scope.outputs.github_mode_active == 'true' && (github.event_name == 'push' || needs.changed-scope.outputs.run_installed_runtime_baseline == 'true')
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Setup Node environment
+        uses: ./.github/actions/setup-node-env
+        with:
+          install-bun: "false"
+
+      - name: Run installed runtime smoke baseline
+        run: bash scripts/ci-installed-runtime-smoke.sh
 
   # Build dist once for Node-relevant changes and share it with downstream jobs.
   build-artifacts:
