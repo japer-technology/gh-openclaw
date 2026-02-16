@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "expectedVersionPrefix": "2026.",
+  "helpTokens": [
+    "Usage: openclaw [options] [command]",
+    "Commands:",
+    "gateway",
+    "channels",
+    "config"
+  ],
+  "requiredTarballEntries": [
+    "package/openclaw.mjs",
+    "package/dist/index.js",
+    "package/dist/entry.js",
+    "package/package.json"
+  ]
+}
