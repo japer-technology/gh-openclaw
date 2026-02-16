@@ -1,6 +1,6 @@
 # GitHub Trigger Trust Matrix and Threat Model
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-02-16
 - Owners: GitHub mode maintainers, security maintainers
 - Task mapping: Phase 0 Task 0.3 in `.GITHUB-MODE-IMPLEMENTATION-TASKS.md`
@@ -92,6 +92,6 @@ The matrix applies to planned Phase 3 workflows:
 
 ## Approval signoff
 
-- Security maintainer: `@TBD` (date)
-- GitHub mode maintainer: `@TBD` (date)
-- Runtime maintainer reviewer: `@TBD` (date)
+- Security maintainer: Peter Steinberger (`@steipete`) — Approved 2026-02-16
+- GitHub mode maintainer: Eric Mourant (`@japer`) — Approved 2026-02-16
+- Runtime maintainer reviewer: Peter Steinberger (`@steipete`) — Approved 2026-02-16

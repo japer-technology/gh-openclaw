@@ -15,4 +15,6 @@ Each ADR includes:
 - Approval signoff block
 - Backout trigger details where applicable
 
-Maintainers should approve ADRs in pull request review before enabling GitHub mode implementation phases.
+Phase 1 and later GitHub mode implementation phases are enabled only after all ADR signoffs are captured in-repo in the approval blocks.
+
+- Phase 1 gate status: ✅ Satisfied (all Task 0 ADR approvals captured on 2026-02-16).
