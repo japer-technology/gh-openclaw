@@ -63,6 +63,6 @@ When trigger fires, maintainers must:
 
 ## Approval signoff
 
-- Runtime maintainer: Peter Steinberger (`@steipete`) — Approved
+- Runtime maintainer: Eric Mourant (`@japer`) — Approved
 - Release maintainer: Eric Mourant (`@japer`) — Approved
 - Approval date: `2026-02-16`
