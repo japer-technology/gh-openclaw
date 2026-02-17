@@ -56,6 +56,30 @@ Status: ✅ Complete.
 
 ---
 
+## Cross-cutting Runtime Constraint — GitHub Actions as Stateless Ephemeral Workers
+
+All implementation tasks must treat GitHub Actions runners as **stateless ephemeral workers**. Jobs receive fresh execution environments, and local runner disks are temporary scratch space that cannot be depended on after the run.
+
+### Must be externalized before run start
+
+- **Memory/context:** Any agent memory, durable context, routing state, or policy state required by a run.
+- **Artifacts/evidence history:** Prior reports, attestations, summaries, and audit evidence needed for gating or diagnosis.
+- **Checkpoints/resume markers:** Long-running evaluation or migration checkpoints, replay markers, and resume tokens.
+- **Reusable caches:** Dependency/build/model/data caches intended for cross-run reuse via explicit cache/artifact/registry systems.
+
+### Must not rely on local persistence between runs
+
+- Files created on runner-local disk in earlier runs.
+- Previous run temp directories, process memory, or local DB/state files.
+- Same host/workspace affinity across runs (runner identity is non-deterministic).
+- Any log/output not explicitly exported to durable storage/artifacts.
+
+### Task design requirement
+
+When defining or implementing tasks in Phases 1–7, include where durable state lives, how it is fetched at run start, and how outputs are re-externalized at run end so retries/replays remain deterministic.
+
+---
+
 ## Phase 1 — Contract Scaffolding and Parity Framework
 
 Task 1 readiness: ✅ Ready to commence (all required runtime contracts exist and `pnpm contracts:github:validate` passes).
