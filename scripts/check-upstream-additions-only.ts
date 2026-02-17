@@ -18,7 +18,7 @@
 import { execSync } from "node:child_process";
 import process from "node:process";
 
-const GITHUB_MODE_OWNED_PATTERNS = [
+export const GITHUB_MODE_OWNED_PATTERNS = [
   /^docs\/github-mode\//,
   /^runtime\/github\//,
   /^\.github\/workflows\/github-mode-/,
@@ -26,27 +26,40 @@ const GITHUB_MODE_OWNED_PATTERNS = [
   /^scripts\/check-upstream-additions-only\.ts$/,
 ];
 
-function isGithubModeOwned(filePath: string): boolean {
+export function isGithubModeOwned(filePath: string): boolean {
   return GITHUB_MODE_OWNED_PATTERNS.some((pattern) => pattern.test(filePath));
 }
 
-function getModifiedUpstreamFiles(): string[] {
-  // Find the merge base with main/default branch
-  let baseBranch = "main";
-  try {
-    execSync(`git rev-parse --verify origin/${baseBranch}`, { stdio: "pipe" });
-  } catch {
-    try {
-      execSync(`git rev-parse --verify origin/master`, { stdio: "pipe" });
-      baseBranch = "master";
-    } catch {
-      // If no remote branches, compare against HEAD~1
-      console.log("No remote base branch found. Comparing against HEAD~1.");
-      baseBranch = "";
+type DiffEntry = { status: string; path: string };
+
+export function findViolations(entries: DiffEntry[]): string[] {
+  const violations: string[] = [];
+  for (const entry of entries) {
+    if (entry.status === "A") {
+      continue;
+    }
+    if (!isGithubModeOwned(entry.path)) {
+      violations.push(`${entry.status}\t${entry.path}`);
     }
   }
+  return violations;
+}
 
-  const baseRef = baseBranch ? `origin/${baseBranch}` : "HEAD~1";
+function determineBaseRef(): string {
+  for (const branch of ["main", "master"]) {
+    try {
+      execSync(`git rev-parse --verify origin/${branch}`, { stdio: "pipe" });
+      return `origin/${branch}`;
+    } catch {
+      // Try next branch name
+    }
+  }
+  console.log("No remote base branch found. Comparing against HEAD~1.");
+  return "HEAD~1";
+}
+
+function getModifiedUpstreamFiles(): string[] {
+  const baseRef = determineBaseRef();
 
   let diffOutput: string;
   try {
@@ -55,7 +68,6 @@ function getModifiedUpstreamFiles(): string[] {
       stdio: ["pipe", "pipe", "pipe"],
     }).trim();
   } catch {
-    // Fallback: compare against parent commit
     try {
       diffOutput = execSync(`git diff --name-status HEAD~1..HEAD`, {
         encoding: "utf8",
@@ -71,29 +83,16 @@ function getModifiedUpstreamFiles(): string[] {
     return [];
   }
 
-  const violations: string[] = [];
-
+  const entries: DiffEntry[] = [];
   for (const line of diffOutput.split("\n")) {
     const parts = line.split("\t");
     if (parts.length < 2) {
       continue;
     }
-
-    const status = parts[0].trim();
-    const filePath = parts[1].trim();
-
-    // 'A' = Added (always safe)
-    // 'M' = Modified, 'D' = Deleted, 'R' = Renamed — only safe for GitHub-Mode-owned paths
-    if (status === "A") {
-      continue;
-    }
-
-    if (!isGithubModeOwned(filePath)) {
-      violations.push(`${status}\t${filePath}`);
-    }
+    entries.push({ status: parts[0].trim(), path: parts[1].trim() });
   }
 
-  return violations;
+  return findViolations(entries);
 }
 
 function main(): void {
@@ -128,4 +127,9 @@ function main(): void {
   process.exit(1);
 }
 
-main();
+if (
+  import.meta.url === `file://${process.argv[1]}` ||
+  process.argv[1]?.endsWith("check-upstream-additions-only.ts")
+) {
+  main();
+}

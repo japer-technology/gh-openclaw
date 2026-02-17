@@ -1,31 +1,7 @@
 import { describe, expect, it } from "vitest";
-
-const GITHUB_MODE_OWNED_PATTERNS = [
-  /^docs\/github-mode\//,
-  /^runtime\/github\//,
-  /^\.github\/workflows\/github-mode-/,
-  /^scripts\/validate-github-runtime-contracts\.ts$/,
-  /^scripts\/check-upstream-additions-only\.ts$/,
-];
-
-function isGithubModeOwned(filePath: string): boolean {
-  return GITHUB_MODE_OWNED_PATTERNS.some((pattern) => pattern.test(filePath));
-}
+import { findViolations, isGithubModeOwned } from "../scripts/check-upstream-additions-only.js";
 
 type DiffEntry = { status: string; path: string };
-
-function findViolations(entries: DiffEntry[]): string[] {
-  const violations: string[] = [];
-  for (const entry of entries) {
-    if (entry.status === "A") {
-      continue;
-    }
-    if (!isGithubModeOwned(entry.path)) {
-      violations.push(`${entry.status}\t${entry.path}`);
-    }
-  }
-  return violations;
-}
 
 describe("isGithubModeOwned", () => {
   it("accepts docs/github-mode paths", () => {
