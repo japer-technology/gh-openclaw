@@ -229,3 +229,6 @@ GitHub Mode is implementable as a pure overlay because OpenClaw's architecture a
 5. The **contract-first design** decouples evolution of core and overlay.
 
 A fork owner can install GitHub Mode by adding files to owned paths, sync with upstream at any cadence without conflicts, and fully remove the overlay by deleting those same paths — returning to a state indistinguishable from vanilla upstream. The installed runtime is never aware that GitHub Mode existed.
+
+Alternative approaches were compared — patches, submodules, monorepo embedding, and separate repos were all evaluated and found inferior to this overlay approach.
+
