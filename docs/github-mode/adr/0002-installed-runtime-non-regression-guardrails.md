@@ -1,6 +1,6 @@
 # ADR 0002 Installed runtime non regression guardrails
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-02-16
 - Owners: Runtime maintainers, release maintainers
 - Decision scope: Non regression policy while GitHub mode is introduced
@@ -63,6 +63,6 @@ When trigger fires, maintainers must:
 
 ## Approval signoff
 
-- Runtime maintainer: `@TBD`
-- Release maintainer: `@TBD`
-- Approval date: `YYYY-MM-DD`
+- Runtime maintainer: Eric Mourant (`@japer`) — Approved
+- Release maintainer: Eric Mourant (`@japer`) — Approved
+- Approval date: `2026-02-16`

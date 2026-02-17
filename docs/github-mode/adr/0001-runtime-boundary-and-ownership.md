@@ -1,6 +1,6 @@
 # ADR 0001 Runtime boundary and ownership
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-02-16
 - Owners: Runtime maintainers, GitHub mode maintainers
 - Decision scope: Installed runtime and GitHub mode architecture boundaries
@@ -74,6 +74,6 @@ The following are prohibited and must fail review:
 
 ## Approval signoff
 
-- Runtime maintainer: `@TBD`
-- GitHub mode maintainer: `@TBD`
-- Approval date: `YYYY-MM-DD`
+- Runtime maintainer: Eric Mourant (`@japer`) — Approved
+- GitHub mode maintainer: Eric Mourant (`@japer`) — Approved
+- Approval date: `2026-02-16`
