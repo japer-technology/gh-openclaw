@@ -52,6 +52,51 @@ Implementations must not rely on any of the following between workflow runs:
 - Validation and promotion gates must consume only repository content plus explicitly fetched durable state.
 - Incident/debug workflows must always emit reproducible evidence bundles so run-to-run forensics never depends on runner-local residue.
 
+### Persistent Memory Design
+
+GitHub-mode requires a durable persistent-memory layer so useful agent context survives runner teardown. The runner filesystem is never a source of truth.
+
+#### System of record
+
+- **Primary system of record:** managed object storage for checkpoint/event blobs and transcripts.
+- **Index/query system of record:** managed database for metadata, lookup, and conflict coordination.
+- **Optional projection stores:** vector/search indexes may be built as derived views, but they are rebuildable and never authoritative.
+
+#### Read/write timing
+
+- **Run start (hydrate):** load the latest committed memory snapshot plus unapplied deltas for the target scope (`entity`, `repo`, `branch`, `thread`, or `run lineage`).
+- **Periodic checkpoints (heartbeat):** persist incremental deltas at deterministic boundaries (for example: command completion, tool batch completion, or fixed wall-clock interval) with monotonic sequence IDs.
+- **Run end (finalize):** attempt a final commit that compacts deltas into a new snapshot and records final run status/evidence references.
+- **Crash-safe fallback:** if a run exits unexpectedly, previously persisted checkpoints must be replayable without runner-local recovery.
+
+#### Consistency model and conflict handling
+
+- **Consistency target:** read-your-writes within a run scope; eventual consistency across concurrent runs.
+- **Versioning:** each write carries `baseVersion` and `newVersion` (or equivalent compare-and-swap token).
+- **Conflict policy:** reject stale writes on version mismatch; retry by rehydrating latest state and replaying deterministic pending delta logic.
+- **Merge policy:** append-only event log for auditable history, plus periodic snapshot compaction; never silently last-write-wins on structured state.
+- **Idempotency:** all writes include idempotency keys (`runId` + `stepId` + `sequence`) so retries cannot duplicate logical events.
+
+#### Retention and TTL policy
+
+- **Hot memory window:** keep frequently-read snapshots/checkpoints for a short operational window (for example, 7-30 days) for fast resume.
+- **Warm audit window:** keep append-only event history and run metadata for governance/forensics (for example, 90-365 days).
+- **Expiration handling:** TTL expiry must be explicit, policy-driven, and logged in an auditable tombstone record.
+- **Legal/compliance overrides:** retention holds supersede TTL deletion when required.
+
+#### Minimal persistent data model (survives runner teardown)
+
+Implementers must persist at least the following records outside the runner:
+
+| Record           | Required fields (minimum)                                                                                              | Purpose                                                    |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `MemorySnapshot` | `snapshotId`, `scopeKey`, `version`, `createdAt`, `stateBlobRef`, `schemaVersion`                                      | Latest compacted memory image used for run hydration.      |
+| `MemoryDelta`    | `deltaId`, `scopeKey`, `baseVersion`, `newVersion`, `sequence`, `idempotencyKey`, `patchBlobRef`, `createdAt`, `runId` | Ordered incremental updates between snapshots.             |
+| `RunCheckpoint`  | `checkpointId`, `runId`, `scopeKey`, `snapshotId`, `lastDeltaSequence`, `status`, `createdAt`                          | Resume marker for in-progress or interrupted runs.         |
+| `RunJournal`     | `runId`, `entityId`, `workflowRef`, `commitSha`, `startedAt`, `endedAt`, `outcome`, `artifactRefs`                     | Audit trail tying memory evolution to GitHub run evidence. |
+
+Anything not persisted in this model (or a strict superset) is treated as ephemeral and must be assumed lost after runner teardown.
+
 ---
 
 ## 3) Workstreams
