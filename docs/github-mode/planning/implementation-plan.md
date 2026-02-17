@@ -24,6 +24,36 @@ This plan operationalizes `docs/github-mode/overview.md` into phased execution w
 
 ---
 
+## 2.1) GitHub Actions Runtime Model: Stateless Ephemeral Workers
+
+GitHub-mode workflows must be designed as **stateless, ephemeral workers**. Every job runs in a fresh environment and local disk state is disposable after the run ends. Treat the runner filesystem as temporary scratch space only.
+
+### Externalize before run start
+
+Before any workflow run starts, all state needed for deterministic execution must already exist in durable systems outside the runner:
+
+- **Memory/context state** (agent memory, durable conversation/project context, routing/policy state) must live in managed stores or repository-tracked artifacts.
+- **Artifacts and evidence history** (prior reports, summaries, attestations, review evidence) must be persisted in GitHub artifacts/releases/issues/PR metadata or approved external stores.
+- **Checkpoints/resume state** (long-running process checkpoints, evaluation baselines, replay markers) must be checkpointed to external storage with stable identifiers.
+- **Caches** (dependency caches, model/data caches, build outputs intended for reuse) must be provisioned through explicit cache backends (for example, GitHub cache/artifacts/registry), never implicit local disk reuse.
+
+### Persistence anti-assumptions
+
+Implementations must not rely on any of the following between workflow runs:
+
+- Files written to local disk in a previous run.
+- Local databases, temp directories, or process state from prior jobs/runs.
+- Runner identity affinity (same host, same VM, same workspace path).
+- Unpublished logs or transient job outputs that were not exported as durable artifacts.
+
+### Design implications for this plan
+
+- Any phase deliverable that requires continuity across runs must define its **external state location**, retention window, and recovery behavior.
+- Validation and promotion gates must consume only repository content plus explicitly fetched durable state.
+- Incident/debug workflows must always emit reproducible evidence bundles so run-to-run forensics never depends on runner-local residue.
+
+---
+
 ## 3) Workstreams
 
 - **WS-A: Runtime contracts and parity**
