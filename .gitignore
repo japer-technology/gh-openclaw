@@ -86,3 +86,6 @@ USER.md
 !.agent/workflows/
 /local/
 package-lock.json
+
+# GitHub Mode generated bundles
+gitclaw-*.zip

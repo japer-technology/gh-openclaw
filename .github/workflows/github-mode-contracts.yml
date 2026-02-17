@@ -6,10 +6,10 @@ on:
       - "docs/github-mode/**"
       - "scripts/validate-github-runtime-contracts.ts"
       - "scripts/check-upstream-additions-only.ts"
-      - "scripts/setup-github-mode-fork.ts"
+      - "scripts/build-github-mode-bundle.ts"
       - "test/check-upstream-additions-only.test.ts"
       - "test/validate-github-runtime-contracts.test.ts"
-      - "test/setup-github-mode-fork.test.ts"
+      - "test/build-github-mode-bundle.test.ts"
   push:
     branches: [main]
     paths:
@@ -17,10 +17,10 @@ on:
       - "docs/github-mode/**"
       - "scripts/validate-github-runtime-contracts.ts"
       - "scripts/check-upstream-additions-only.ts"
-      - "scripts/setup-github-mode-fork.ts"
+      - "scripts/build-github-mode-bundle.ts"
       - "test/check-upstream-additions-only.test.ts"
       - "test/validate-github-runtime-contracts.test.ts"
-      - "test/setup-github-mode-fork.test.ts"
+      - "test/build-github-mode-bundle.test.ts"
 
 permissions:
   contents: read
