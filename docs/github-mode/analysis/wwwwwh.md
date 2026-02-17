@@ -5,7 +5,7 @@ Based on the proposal to transition OpenClaw to a GitHub-native foundation, here
 ### **WHAT**
 
 **The Project:** OpenClaw (formerly Clawdbot/Moltbot) is a local-first, model-agnostic AI agent that proactively executes tasks across WhatsApp, Telegram, and local file systems. It distinguishes itself from chatbots by being a "doer" rather than a "talker."
-**The Proposal:** "GitHub Mode" is a re-architecture that moves the agent's governance and execution logic from insecure local environments into the GitHub repository itself. Instead of just hosting code, GitHub becomes the **Runtime Plane**, using Actions for compute, OIDC for identity, and Environment Gates for permission management. This transforms the project from a "viral hack" into an audited, enterprise-grade utility.
+**The Proposal:** "GitHub Mode" is a re-architecture that moves the agent's governance and execution logic from insecure local environments into the GitHub repository itself. Instead of just hosting code, GitHub becomes the **Runtime Plane**, using Actions for compute, OIDC for identity, and Environment Gates for permission management. The headline value is multi-entity, multi-agent collaboration: teams can pass work across time zones, run reviewer-agent plus implementer-agent loops, and schedule async maintenance jobs as part of normal repository flow.
 
 ### **WHERE**
 
@@ -26,9 +26,10 @@ Based on the proposal to transition OpenClaw to a GitHub-native foundation, here
 
 ### **WHY**
 
-**1. Neutrality (The OpenAI Problem):** With Steinberger joining OpenAI, OpenClaw risks becoming a "vendor-locked" wrapper for GPT models. A neutral foundation ensures it remains model-agnostic, supporting Anthropic, Google, and local LLMs equally.
-**2. Security (The "God Mode" Crisis):** The current ecosystem is a security nightmare. Thousands of users are running exposed agents with full file-system access (CVE-2026-25253). GitHub’s "Secure-by-Construction" environment (Secret scanning, Dependabot, OIDC) is the only scalable way to patch these vulnerabilities without requiring every user to be a SysAdmin.
-**3. Survival:** To evolve from a hobbyist toy to a business utility, OpenClaw needs the "boring" governance (audits, attestation, access controls) that only a managed platform like GitHub can provide.
+**1. Collaboration at team scale (multi-entity + multi-agent):** GitHub mode enables real relay-style work instead of single-session heroics: APAC-to-EU-to-US handoffs in the same issue/PR, reviewer-agent + implementer-agent loops with explicit checkpoints, and async maintenance jobs that run while humans are offline.
+**2. Neutrality (The OpenAI Problem):** With Steinberger joining OpenAI, OpenClaw risks becoming a "vendor-locked" wrapper for GPT models. A neutral foundation ensures it remains model-agnostic, supporting Anthropic, Google, and local LLMs equally.
+**3. Security (The "God Mode" Crisis):** The current ecosystem is a security nightmare. Thousands of users are running exposed agents with full file-system access (CVE-2026-25253). GitHub’s "Secure-by-Construction" environment (Secret scanning, Dependabot, OIDC) is the only scalable way to patch these vulnerabilities without requiring every user to be a SysAdmin.
+**4. Survival:** To evolve from a hobbyist toy to a business utility, OpenClaw needs the "boring" governance (audits, attestation, access controls) that make these shared workflows reliable.
 
 ### **HOW MUCH**
 
