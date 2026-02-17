@@ -1,18 +1,18 @@
 **Title:** The Repository as Runtime: Why GitHub Mode Complements Local Mode for OpenClaw Stewardship
 
 **Abstract**
-The rapid ascent of OpenClaw (formerly Clawdbot and Moltbot) effectively launched the "agentic era" of 2026, transitioning AI from reactive chat to proactive execution. However, the departure of founder Peter Steinberger to OpenAI precipitates a crisis of identity for the project. If OpenClaw remains a personal asset of an OpenAI employee, it risks becoming a vendor-locked wrapper for GPT models. If it is cast adrift without structure, its documented security vulnerabilities will persist. This paper argues that GitHub Mode—used as an additional operating mode, not a replacement for local workflows—gives OpenClaw a collaborative, auditable, and policy-aware runtime for team operations while preserving local experimentation.
+The rapid ascent of OpenClaw (formerly Clawdbot and Moltbot) effectively launched the "agentic era" of 2026, transitioning AI from reactive chat to proactive execution. However, the departure of founder Peter Steinberger to OpenAI precipitates a crisis of identity for the project. If OpenClaw remains a personal asset of an OpenAI employee, it risks becoming a vendor-locked wrapper for GPT models. If it is cast adrift without structure, its documented security vulnerabilities will persist. This paper argues that GitHub Mode—used as an additional operating mode, not a replacement for local workflows—gives OpenClaw a collaborative runtime for multi-entity, multi-agent operations first, then layers in auditability and policy controls without sacrificing local experimentation. In practice, this means teams can hand off work across time zones, pair a reviewer agent with an implementer agent on the same PR, and run asynchronous maintenance jobs between human sessions.
 
 ### Positioning Matrix
 
 - **Local mode:** fast, experimental, personal.
-- **GitHub mode:** collaborative, policy-aware, asynchronous.
+- **GitHub mode:** multi-agent collaborative, asynchronous, policy-aware.
 
 ### 1. Introduction: Two Modes, One Product
 
 OpenClaw represents a paradigm shift in personal AI, enabling local-first agents to execute complex workflows across WhatsApp, Telegram, and local file systems. Its growth has been meteoric, achieving 100,000 stars faster than React or Linux, driven by a community hungry for automation that "actually does things."
 
-However, this viral success has outpaced the project’s operational maturity. As detailed in recent security reports, the ecosystem is plagued by "God Mode" permission risks, exposed gateways (CVE-2026-25253), and a chaotic "ClawHub" skill marketplace infested with malware. With Steinberger joining OpenAI to shape their agentic products, OpenClaw needs stronger neutrality and governance without sacrificing the speed and creativity that made local-first adoption successful. To survive as the "Switzerland of AI Agents," OpenClaw should keep local mode as the fastest path for individual iteration and add GitHub mode as the default path for multi-person, auditable work.
+However, this viral success has outpaced the project’s operational maturity. As detailed in recent security reports, the ecosystem is plagued by "God Mode" permission risks, exposed gateways (CVE-2026-25253), and a chaotic "ClawHub" skill marketplace infested with malware. With Steinberger joining OpenAI to shape their agentic products, OpenClaw needs stronger neutrality and governance without sacrificing the speed and creativity that made local-first adoption successful. To survive as the "Switzerland of AI Agents," OpenClaw should keep local mode as the fastest path for individual iteration and add GitHub mode as the default path for multi-person, multi-agent collaboration that remains auditable.
 
 ### 2. The Neutrality Imperative: Avoiding the Vendor Trap
 
@@ -44,7 +44,13 @@ According to the project’s internal analysis (`docs/github-mode/the-idea.md`),
 
 For OpenClaw to survive, it must support both ends of the spectrum: fast personal experimentation and reliable shared operations. The goal is not to retire tinkering, but to provide an additional operating mode where teams can collaborate with explicit controls.
 
-A GitHub-based Foundation provides the necessary governance structures immediately:
+Before governance mechanics, the practical value is collaborative throughput through multiple entities and agents:
+
+- **Time-zone handoff:** An APAC agent run leaves a structured PR update that a Europe-based maintainer and a US-based agent can continue without losing context.
+- **Reviewer + implementer pairing:** One agent prepares a patch while a second reviewer agent checks policy, tests, and risk notes before human approval.
+- **Asynchronous maintenance jobs:** Scheduled agents handle dependency refreshes, flaky test triage, and docs link checks overnight so humans wake up to reviewed deltas.
+
+A GitHub-based Foundation then adds the governance and compliance structures needed to make those workflows trustworthy at scale:
 
 - **CODEOWNERS:** Enforcing review requirements for critical "brainstem" code (routing, tool policy) to prevent malicious commits.
 - **Attestation:** Using artifact attestations to prove that the agent running in production matches the source code, a requirement for enterprise adoption.
