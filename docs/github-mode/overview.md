@@ -251,6 +251,23 @@ Command authorization occurs before any privileged tool execution.
 - `github-mode-agent-run.yml`
 - `github-mode-bot-pr.yml`
 
+Before any agent execution job starts, `github-mode-command.yml` and `github-mode-agent-run.yml` must enforce blocking preflight gates for:
+
+- skill/package scan
+- lockfile/provenance checks
+- policy evaluation
+
+These gates are fail-closed: if any gate cannot produce a passing decision, the workflow terminates before agent execution.
+
+Minimal gate reporting format (markdown summary + JSON artifact):
+
+```text
+gate=<skill-package-scan|lockfile-provenance|policy-eval>
+result=<PASS|FAIL>
+reason=<short machine-parseable reason>
+evidence=<artifact-or-log-reference>
+```
+
 ### 8.3 Collaboration and template governance
 
 - `github-mode-bootstrap-entity.yml`

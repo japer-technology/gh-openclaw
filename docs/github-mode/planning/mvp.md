@@ -88,6 +88,13 @@ Command constraints:
 
 - Untrusted actors: read-only/analysis-safe command handling.
 - Trusted actors: policy-gated adapter usage.
+- Before agent execution, run blocking gates in order: skill/package scan, lockfile/provenance checks, policy evaluation.
+- Gates are fail-closed: any gate failure (or missing verdict) halts workflow before agent execution.
+- Emit minimal pass/fail gate output in workflow summary/artifacts:
+  - `gate=<skill-package-scan|lockfile-provenance|policy-eval>`
+  - `result=<PASS|FAIL>`
+  - `reason=<short machine-parseable reason>`
+  - `evidence=<artifact-or-log-reference>`
 - All mutation paths end in bot branch + PR; never direct writes to protected branches.
 
 ### 4.3 Bot PR workflow

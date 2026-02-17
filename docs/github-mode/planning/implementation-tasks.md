@@ -316,6 +316,13 @@ Task 1 readiness: ✅ Ready to commence (all required runtime contracts exist an
 
 - All three workflows execute in intended sequence.
 - Command baseline (explain, refactor, test, diagram) is supported.
+- `github-mode-command.yml` and `github-mode-agent-run.yml` run blocking pre-agent gates in this order: skill/package scan, lockfile/provenance checks, policy evaluation.
+- Gates are fail-closed: any gate failure or indeterminate decision stops workflow before agent execution.
+- Each gate emits a minimal pass/fail record in summary + artifact:
+  - `gate=<skill-package-scan|lockfile-provenance|policy-eval>`
+  - `result=<PASS|FAIL>`
+  - `reason=<short machine-parseable reason>`
+  - `evidence=<artifact-or-log-reference>`
 - End-to-end command-to-PR works for trusted users.
 
 ---
