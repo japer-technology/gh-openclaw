@@ -276,9 +276,23 @@ Required behavior:
 
 - trust-aware command authorization
 - policy-gated adapter invocation
+- blocking pre-agent gates for skill/package scan, lockfile/provenance checks, and policy evaluation
 - required state adapter pipeline (snapshot hydrate/validate/run/persist/record)
 - provenance metadata embedded in outputs (source command, commit SHA, run id, policy version)
 - no direct writes to protected branches
+
+Gate semantics for `github-mode-command.yml` and `github-mode-agent-run.yml`:
+
+- fail-closed execution: gate failures (or missing/indeterminate gate verdicts) stop workflow before any agent step
+- deterministic gate ordering: skill/package scan → lockfile/provenance checks → policy evaluation
+- minimal pass/fail reporting emitted to markdown summary and machine-readable artifact:
+
+```text
+gate=<skill-package-scan|lockfile-provenance|policy-eval>
+result=<PASS|FAIL>
+reason=<short machine-parseable reason>
+evidence=<artifact-or-log-reference>
+```
 
 State adapter pipeline acceptance criteria:
 
@@ -308,6 +322,7 @@ Selection criteria:
 ### Exit criteria
 
 - Trusted users can trigger command-to-PR flow end-to-end.
+- Agent execution cannot run unless all three pre-agent gates pass.
 - Untrusted users cannot invoke privileged adapters or secret-backed paths.
 
 ### Backout strategy
