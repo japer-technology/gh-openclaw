@@ -67,7 +67,7 @@ OpenClaw executes from repo state in GitHub Actions/Environments:
 
 ## 3) Functional Coverage Model
 
-Every installed feature is classified in `runtime/github/parity-matrix.json` as one of:
+Every installed feature is classified in `runtime/github-mode/parity-matrix.json` as one of:
 
 - `native`: runs unchanged in GitHub mode
 - `adapter`: same semantics via a GitHub-safe adapter
@@ -101,6 +101,87 @@ GitHub mode targets capability parity for approved task classes, but it does not
 | State continuity     | long-lived local session context                            | workflow-scoped context plus committed artifacts        |
 | Best fit             | fast iteration, exploratory debugging, device-coupled tasks | governed automation, reviewable changes, team approvals |
 | UX expectation       | tight loop and low interaction latency                      | auditable loop with higher end-to-end latency           |
+
+### 3.4 UX contract for asynchronous GitHub runs
+
+GitHub mode UX should behave like a visible asynchronous queue, not a hanging terminal session.
+
+#### Expected delay profile
+
+- **Queueing delay:** usually short, but may spike during org-wide CI load or constrained runner capacity.
+- **Provisioning delay:** runner startup and checkout add fixed overhead before assistant logic starts.
+- **Execution delay:** task complexity (tests, policy checks, artifact generation, PR updates) determines run duration.
+- **Human-gated delay:** runs that request clarification or approvals can pause indefinitely until input arrives.
+
+The product requirement is not to eliminate delay, but to make delay legible with explicit state transitions and timestamps.
+
+#### Required progress checkpoints
+
+GitHub mode remote runs must report the same checkpoint lifecycle so operators can correlate workflow runs, comments, and local CLI status output.
+
+Always emit checkpoints in this order:
+
+1. **Provisioning:** resolve trust level, runner target, credentials, and workflow prerequisites.
+2. **Runner startup:** allocate/start the runner and launch the job environment.
+3. **Hydration:** fetch checkout + checkpoint context and load run inputs/contracts.
+4. **Scanning:** run preflight probes (policy gates, capability checks, route/permission checks).
+5. **Execution:** execute the requested command/task automation.
+6. **Upload/finalize:** persist artifacts/checkpoints, emit final status, and publish handoff output.
+
+If a checkpoint is intentionally not needed, emit it with `skipped` so timelines stay phase-aligned.
+
+#### Checkpoint mapping to CLI + status surfaces
+
+Use existing terminal primitives for local operator visibility:
+
+- progress/spinner rendering: `src/cli/progress.ts`
+- tabular status rendering: `src/terminal/table.ts`
+
+| Checkpoint      | Live progress label (operator CLI)    | `openclaw status --all` expectation                                | `openclaw status --deep` expectation                                            |
+| --------------- | ------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| Provisioning    | `Provisioning GitHub run…`            | Show trigger source, trust context, and queue/provisioning reason. | Include remote reachability or queue constraints before deep probes.            |
+| Runner startup  | `Starting GitHub runner…`             | Show runner allocation/startup state and elapsed timing.           | Include job/runner probe evidence when available.                               |
+| Hydration       | `Hydrating workflow context…`         | Show checkout/config/checkpoint readiness and contract load state. | Include hydration probe details for fetch/auth/contract load failures.          |
+| Scanning        | `Scanning policy and capabilities…`   | Show gate outcomes and actionable warnings before execution.       | Include failing probe identifiers, timeout class, and first actionable blocker. |
+| Execution       | `Executing GitHub task…`              | Show active phase or last confirmed active phase.                  | Include deep probe deltas tied to execution failures or runtime constraints.    |
+| Upload/finalize | `Uploading artifacts and finalizing…` | Show terminal outcome with artifact/handoff availability.          | Include final probe state plus completion-time regressions if detected.         |
+
+#### Fallback when telemetry is unavailable
+
+When telemetry is delayed, partial, or unavailable:
+
+1. Preserve deterministic checkpoint ordering and continue showing the **last confirmed checkpoint**.
+2. Mark unresolved state as `unknown` (never infer completion from silence).
+3. Add an explicit degraded-telemetry note to `status --all`.
+4. Include timeout/failure probe details in `status --deep` to explain visibility gaps.
+5. On terminal transition, emit a best-effort end state (`completed`, `failed`, or `unknown`) so automation can stop waiting.
+
+#### User-facing state model
+
+| State              | What it means for the user                                                     | CLI surface (local operator view)                                                                   | GitHub surface (issue/PR/checks)                                                                    |
+| ------------------ | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `queued`           | Request accepted, waiting for runner slot or prior workflow completion         | Show an active wait line/spinner with queue reason and elapsed time                                 | Post an acknowledgement comment and show pending check/status                                       |
+| `provisioning`     | Runner starting, repository/checkpoint hydration, baseline setup in progress   | Update status text to provisioning phases (runner start, checkout, hydrate) with elapsed timer      | Check/status remains in-progress; optional progress comment edit with current provisioning step     |
+| `running`          | Assistant logic is actively executing tools/policies/tasks                     | Stream coarse phase updates (planning, edits, validation, packaging) and keep elapsed timer visible | In-progress check with step summary in job logs and workflow summary artifact                       |
+| `waiting_on_input` | Automation is blocked on human decision, clarification, or privileged approval | Mark run as paused and print exactly what input is needed plus how to resume                        | Comment requesting input, apply waiting label/status marker, and stop further execution until reply |
+| `completed`        | Run finished successfully with final outputs ready for review/merge/handoff    | Print final summary with outcome, changed files/artifacts, and next command hints                   | Final success check plus completion comment linking PR/artifacts/attestations                       |
+| `failed`           | Run terminated with an error or policy block that requires intervention        | Print failure class, first actionable error, and rerun/resume guidance                              | Failed check with concise failure summary and links to failing step/log section                     |
+
+#### Status notification pattern
+
+- Emit notifications on **state change**, not on every log line.
+- Include **run id**, **current state**, **elapsed time**, and **next expected transition** when known.
+- Prefer **single-thread progress updates** (comment edits or one canonical status thread) over noisy comment spam.
+- Keep state wording stable across CLI and GitHub so users can map local and remote views without translation.
+
+#### Completion handoff pattern
+
+When a run reaches `completed` or `failed`, handoff must be explicit:
+
+1. **Outcome statement:** one-line final state with timestamp.
+2. **Evidence bundle:** links to workflow run, logs, artifacts, and produced PR/commit if any.
+3. **Operator action:** clear next step (`review PR`, `approve`, `provide input`, `retry with command ...`).
+4. **Ownership continuity:** identify who/what should act next (requester, reviewer, release owner, or automation).
 
 ---
 
@@ -139,6 +220,18 @@ GitHub mode reuses these core modules:
 - route/policy simulation adapters
 - replay/memory/channel emulation adapters
 
+### 4.3 Failure-mode contract for checkpointed GitHub runs
+
+GitHub-mode architecture must fail closed with deterministic recovery semantics whenever durability or execution guarantees degrade.
+
+| Failure mode                      | Detection                                                                                                                             | User-visible error                                                                                | Retry policy                                                                                                                | Rollback/recovery path                                                                                                                                         |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Storage unavailable               | Hydration/finalize read-write probe fails (timeout, auth denial, or 5xx) before `MemorySnapshot`/`RunCheckpoint` operations complete. | `Persistence backend unavailable; run paused before state mutation. No new checkpoint committed.` | Exponential backoff with bounded attempts per checkpoint boundary; mark run `failed` when retry budget is exhausted.        | Keep last committed snapshot/checkpoint as source of truth; next run rehydrates from previous committed version and replays only idempotent pending deltas.    |
+| Snapshot schema mismatch          | Snapshot manifest `schemaVersion` is unsupported or validation fails during hydration.                                                | `Checkpoint schema mismatch; this runner cannot safely load stored state.`                        | Do not blindly retry the same payload; retry only after migration or compatibility shim is available.                       | Preserve original snapshot immutably, mark run `failed` as migration-required, and resume from migrated snapshot ID after conversion success.                  |
+| Scan failures                     | Preflight gate (`skill-package-scan`, `lockfile-provenance`, `policy-eval`) returns FAIL or cannot produce a verdict within timeout.  | `Preflight security scan failed; execution blocked before agent steps.`                           | Retry once for transient execution errors; never auto-retry policy-denied verdicts.                                         | Keep fail-closed state with zero execution side effects; operator fixes scan/policy inputs and reruns from hydration checkpoint.                               |
+| Runner timeout/preemption         | GitHub cancellation signal, runner eviction, or watchdog timeout before terminal checkpoint.                                          | `Runner stopped before completion; run can resume from last durable checkpoint.`                  | Auto-resume only when trust/policy context is unchanged and retry budget remains; otherwise require explicit rerun command. | Start a new run, hydrate latest `RunCheckpoint`, and replay deterministic remaining work from the last acknowledged sequence.                                  |
+| Partial upload/corrupt checkpoint | Finalize checksum/size verification fails, pointer-swap CAS fails, or immediate read-back decode fails.                               | `Checkpoint upload incomplete or corrupt; new state was not promoted.`                            | Retry upload with same idempotency key and fresh object target; cap retries to avoid duplicate promotions.                  | Leave previous snapshot pointer unchanged, tombstone corrupt object references, and re-finalize from buffered deltas or rerun from prior committed checkpoint. |
+
 ### Egress
 
 - checks/statuses
@@ -161,9 +254,9 @@ GitHub mode uses repository-native contracts as control surfaces:
 - `eval/`
 - `attestations/`
 - `docs/ai/`
-- `runtime/github/` (GitHub mode contracts)
+- `runtime/github-mode/` (GitHub mode contracts)
 
-### 5.1 Required `runtime/github/` artifacts
+### 5.1 Required `runtime/github-mode/` artifacts
 
 - `runtime-manifest.json`
 - `adapter-contracts.json`
@@ -182,9 +275,9 @@ GitHub mode must support creating **multiple OpenClaw entities** in one user/org
 
 Each entity repo must define (Phase 6 deliverables; not yet implemented):
 
-- `runtime/github/entity-manifest.json`
-- `runtime/github/collaboration-policy.json`
-- `runtime/github/remote-entities.json`
+- `runtime/github-mode/entity-manifest.json`
+- `runtime/github-mode/collaboration-policy.json`
+- `runtime/github-mode/remote-entities.json`
 
 ### 6.1 Bootstrap baseline
 
