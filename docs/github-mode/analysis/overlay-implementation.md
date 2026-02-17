@@ -1,7 +1,9 @@
 # Overlay Implementation Analysis: GitHub Mode Without Source Modification
 
 **Date:** 2026-02-17
+
 **Status:** Analysis snapshot
+
 **Scope:** How GitHub Mode can be installed and removed around existing OpenClaw forks without modifying upstream source, while preserving the ability to sync with upstream at will.
 
 ## 1. Problem Statement
