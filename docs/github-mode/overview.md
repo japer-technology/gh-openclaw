@@ -213,7 +213,17 @@ Collaboration is deny-by-default: only allowlisted routes in collaboration polic
 - OIDC federation preferred over static cloud credentials
 - protected branches cannot be written directly by bots
 
-### 7.2 Trust tiers
+### 7.2 CI data persistence anti-pattern
+
+Do **not** commit binary vector database snapshots (for example LanceDB files) into the source repository during normal CI cycles. This is an anti-pattern because it inflates repository history, reduces reviewability, and creates avoidable supply-chain and governance risk around opaque binary blobs.
+
+Approved alternatives:
+
+- store snapshot binaries in object storage with explicit retention and access controls
+- use GitHub Actions artifacts for transient exchange between CI jobs
+- commit only compact textual summaries when they are low-frequency and explicitly human-reviewed
+
+### 7.3 Trust tiers
 
 - **Untrusted**: forks/unknown actors; read-only and constrained adapters only
 - **Semi-trusted**: internal PR contexts; moderate capabilities, no production mutation
