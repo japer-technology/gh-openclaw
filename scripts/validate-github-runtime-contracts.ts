@@ -18,6 +18,10 @@ const requiredContracts: ContractCheck[] = [
     requiredKeys: ["schemaVersion", "manifestVersion", "components"],
   },
   {
+    file: "runtime/github/adapter-contracts.json",
+    requiredKeys: ["schemaVersion", "contractsVersion", "adapters"],
+  },
+  {
     file: "runtime/github/command-policy.json",
     requiredKeys: [
       "schemaVersion",
@@ -28,11 +32,15 @@ const requiredContracts: ContractCheck[] = [
     ],
   },
   {
+    file: "runtime/github/trust-levels.json",
+    requiredKeys: ["schemaVersion", "trustVersion", "levels"],
+  },
+  {
     file: "runtime/github/parity-matrix.json",
     requiredKeys: ["schemaVersion", "matrixVersion", "mappings"],
   },
   {
-    file: "runtime/github/convergence-map.json",
+    file: "runtime/github/workspace-convergence-map.json",
     requiredKeys: [
       "schemaVersion",
       "convergenceVersion",
@@ -105,7 +113,7 @@ function validateParityMatrix(): void {
 }
 
 function validateConvergenceMap(): void {
-  const convergencePath = "runtime/github/convergence-map.json";
+  const convergencePath = "runtime/github/workspace-convergence-map.json";
   const convergence = readJson(convergencePath);
 
   const acceptanceCriteria = convergence.acceptanceCriteria;
