@@ -88,7 +88,7 @@ jobs:
           sed -i "s|__RUNTIME_APPROVER__|${RUNTIME_APPROVER}|g" .tmp/github-mode-skill-policy/policy-decision.json
 
       - name: Upload policy decision artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: quarantine-policy-decision-${{ github.run_id }}
           path: .tmp/github-mode-skill-policy/policy-decision.json

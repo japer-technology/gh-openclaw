@@ -93,7 +93,7 @@ jobs:
           sed -i "s|__INTENDED_TRUST_TIER__|${INTENDED_TRUST_TIER}|g" .tmp/github-mode-skill-intake/pending-submission.json
 
       - name: Upload pending intake artifact (immutable evidence input)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: quarantine-intake-${{ github.run_id }}
           path: .tmp/github-mode-skill-intake/pending-submission.json
