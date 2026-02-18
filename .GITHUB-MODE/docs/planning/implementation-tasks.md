@@ -199,11 +199,11 @@ Status: ✅ Complete.
 
 ## Phase 2 — Security Foundation (GitHub-native)
 
-Phase 2 status: ✅ Complete (Tasks 2.1–2.6 implemented with enforcement scripts/workflows and runtime contracts).
+Phase 2 status: 🟡 Designed/Scaffolded (Tasks 2.1–2.6 have schema/workflow scaffolding; operational evidence is required before promotion to ✅ Complete).
 
 ### Task 2.1 — Secrets Inventory and Rotation Standard
 
-Status: ✅ Complete.
+Status: 🟡 Designed/Scaffolded.
 
 **Workstream:** WS-B
 
@@ -222,11 +222,19 @@ Status: ✅ Complete.
 - `.GITHUB-MODE/docs/security/0003-secrets-inventory-and-rotation.md`
 - `.GITHUB-MODE/runtime/secrets-inventory.json`
 
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using the canonical pattern:
+  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using the filename convention:
+  `task-2.1-secrets-rotation-evidence-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include ISO8601 UTC timestamp, actor identity, reviewed environment scope, and rotation/revocation outcome.
+
 ---
 
 ### Task 2.2 — Environment Protection Configuration
 
-Status: ✅ Complete.
+Status: 🟡 Designed/Scaffolded.
 
 **Workstream:** WS-B
 
@@ -246,11 +254,19 @@ Status: ✅ Complete.
 - `.GITHUB-MODE/scripts/verify-github-environments.ts`
 - `.github/workflows/github-mode-security.yml`
 
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-2.2-environment-protection-verify-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, environment name, reviewer gate result, and branch/tag restriction enforcement result.
+
 ---
 
 ### Task 2.3 — Workflow Permission Hardening
 
-Status: ✅ Complete.
+Status: 🟡 Designed/Scaffolded.
 
 **Workstream:** WS-B
 
@@ -268,11 +284,19 @@ Status: ✅ Complete.
 - `.GITHUB-MODE/scripts/lint-github-mode-workflows.ts`
 - `.github/workflows/github-mode-security-lint.yml`
 
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-2.3-permissions-hardening-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, workflow identifier, evaluated permission map, and untrusted-trigger secret access result.
+
 ---
 
 ### Task 2.4 — OIDC Adoption for Cloud Access
 
-Status: ✅ Complete.
+Status: 🟡 Designed/Scaffolded.
 
 **Workstream:** WS-B
 
@@ -283,6 +307,8 @@ Status: ✅ Complete.
 - OIDC configured for applicable cloud paths.
 - Static long-lived cloud credentials removed from workflow usage.
 - Fallback paths documented only for non-OIDC-compatible systems.
+- Completion requires operational proof from real runs, not just schema/workflow presence.
+  Required proof points per run: target environment name, cloud role assumed, successful OIDC token exchange, and deploy outcome.
 
 **Security Check:** Must satisfy checklist item: “OIDC replaces static cloud credentials where possible”.
 
@@ -292,11 +318,24 @@ Status: ✅ Complete.
 - `.GITHUB-MODE/scripts/check-github-mode-oidc-credentials.ts`
 - `.github/workflows/github-mode-oidc-deploy-scaffold.yml`
 
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-2.4-oidc-deploy-proof-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Each evidence artifact must record and preserve:
+  - `environment`: `github-mode-dev|github-mode-staging|github-mode-prod`
+  - `assumed_role`: cloud IAM role/subject actually assumed
+  - `token_exchange`: explicit success indicator from OIDC exchange
+  - `deploy_result`: pass/fail + deployment target metadata
+  - `timestamp`: ISO8601 UTC time of the run
+
 ---
 
 ### Task 2.5 — Security Lint and Simulation Harness
 
-Status: ✅ Complete.
+Status: 🟡 Designed/Scaffolded.
 
 **Workstream:** WS-B
 
@@ -316,11 +355,19 @@ Status: ✅ Complete.
 - `.GITHUB-MODE/test/github-mode-security-lint.test.ts`
 - `.github/workflows/github-mode-security-lint.yml`
 
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-2.5-security-lint-simulation-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, unpinned-action detection outcome, permission-hardening outcome, and untrusted-secret simulation result.
+
 ---
 
 ### Task 2.6 — Skills Quarantine Pipeline
 
-Status: ✅ Complete.
+Status: 🟡 Designed/Scaffolded.
 
 **Workstream:** WS-B
 
@@ -337,6 +384,8 @@ Status: ✅ Complete.
 - Workflow startup enforcement implements all four gates: pre-resolution, artifact verification, dependency graph, and runtime activation.
 - Emergency revocation path exists with immediate effect: revokes digest, removes from allowlist, invalidates caches, broadcasts incident notice, and opens tracking issue.
 - Skill provenance policy enforced: signed/pinned packages, source provenance checks, dependency provenance requirements, deny-by-default for untrusted sources.
+- Completion requires end-to-end operational evidence from real runs proving the full flow:
+  intake → static scan → classification → allowlist gate enforcement.
 
 **Security Check:** Must enforce “only vetted skills can run in trusted GitHub mode workflows” and “deny by default for untrusted sources.”
 
@@ -352,6 +401,19 @@ Status: ✅ Complete.
 - `.github/workflows/github-mode-skill-static-scan.yml`
 - `.github/workflows/github-mode-skill-policy-classifier.yml`
 - `.github/workflows/github-mode-skill-emergency-revocation.yml`
+
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-2.6-quarantine-e2e-<submission_id>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence set must include immutable records for each stage with shared correlation id:
+  - `intake`: submission accepted into quarantine with initial `pending_scan` state
+  - `scan`: static scan output and gate decision
+  - `classification`: policy classifier result (`approved_limited|approved_trusted|rejected_policy`)
+  - `allowlist_enforcement`: trusted workflow gate pass/fail decision using digest allowlist
+  - `timestamp`: ISO8601 UTC time for every stage artifact
 
 ---
 
