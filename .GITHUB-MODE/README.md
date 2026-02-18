@@ -10,20 +10,16 @@
 
 #### OpenClaw with GitHub Mode allows GitHub to be a first-class runtime plane for OpenClaw, not just a CI wrapper around source code. GitHub Mode trades individual interaction speed for team-scale capabilities with no local equivalent.
 
-### 
-
 <p align="center">
   <a href="https://github.com/japertechnology/openclaw/actions/workflows/ci.yml?branch=main"><img src="https://img.shields.io/github/actions/workflow/status/japertechnology/openclaw/ci.yml?branch=main&style=for-the-badge" alt="japertechnology/openclaw CI status"></a>
   <a href="https://github.com/openclaw/openclaw/releases"><img src="https://img.shields.io/github/v/release/openclaw/openclaw?include_prereleases&style=for-the-badge" alt="GitHub openclaw/openclaw release"></a>
   <a href="LICENCE.md"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
 </p>
 
-GitHub Mode is an additive runtime for **OpenClaw** that shifts orchestration to repository-native workflows while preserving compatibility with the installed runtime. It is designed for teams that need strict reviewability, policy boundaries, and durable runtime contracts.
-
-- OpenClaw Website: https://openclaw.ai
-- OpenClaw Docs: https://docs.openclaw.ai
 - GitHub-Mode Docs: https://github.com/japertechnology/openclaw/tree/main/.GITHUB-MODE/docs
-- GitHub-Mode Runtime contracts: https://github.com/japertechnology/openclaw/tree/main/.GITHUB-MODE/runtime
+- GitHub-Mode Runtime Contracts: https://github.com/japertechnology/openclaw/tree/main/.GITHUB-MODE/runtime
+
+#### GitHub Mode is an additive runtime for **OpenClaw** that shifts orchestration to repository-native workflows while preserving compatibility with the installed runtime. It is designed for teams that need strict reviewability, policy boundaries, and durable runtime contracts.
 
 ---
 
