@@ -1,12 +1,12 @@
-# 🦞 OpenClaw with GitHub Mode Security
+# 🦞 GitHub Mode: Security
+
+### If you believe you've found a security issue in OpenClaw with GitHub Mode, please report it **privately**.
 
 <p align="center">
   <picture>
     <img src="https://raw.githubusercontent.com/japertechnology/openclaw/main/.GITHUB-MODE/assets/logo.png" alt="OpenClaw with GitHub Mode" width="500">
   </picture>
 </p>
-
-If you believe you've found a security issue in OpenClaw with GitHub Mode, please report it **privately**.
 
 ## Where to Report
 
