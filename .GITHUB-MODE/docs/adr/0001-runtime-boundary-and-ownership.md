@@ -46,6 +46,20 @@ The following are prohibited and must fail review:
 - Shared modules that perform runtime side effects (network calls, process control, provider auth) at import time
 - Any direct branch mutation from privileged workflows outside PR mediated flow
 
+### Coupling examples
+
+Allowed patterns (interface-level reuse):
+
+- A shared package exports pure command schema validators consumed by both installed runtime and GitHub mode.
+- GitHub mode adapter implements an orchestration interface and maps it to GitHub workflow/job primitives.
+- Contract tests replay the same fixture set against installed runtime and GitHub adapters without importing `src/**` internals.
+
+Prohibited patterns (implementation coupling):
+
+- A workflow action imports `src/agents/pi-embedded-runner` directly to execute runtime loops inside a job.
+- A `.GITHUB-MODE/scripts/**` tool imports `src/routing/*` to compute policy decisions instead of using extracted contracts.
+- A shared helper package imports installed runtime provider auth modules on load, then is required by GitHub mode checks.
+
 ### Guardrails
 
 - Boundary checks must run in CI for changes touching `.github/**`, `.GITHUB-MODE/**`, or `src/**`.
