@@ -1,4 +1,4 @@
-# OpenClaw with GitHub Mode Security
+# 🦞 OpenClaw with GitHub Mode Security
 
 <p align="center">
   <picture>
