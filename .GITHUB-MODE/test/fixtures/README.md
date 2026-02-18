@@ -1,6 +1,12 @@
-# GitHub Mode test fixtures
+# 🦞 GitHub Mode test fixtures
 
-Reusable fixture files for GitHub Mode test cases.
+### Reusable fixture files for GitHub Mode test cases.
+
+<p align="center">
+  <picture>
+    <img src="https://raw.githubusercontent.com/japertechnology/openclaw/main/.GITHUB-MODE/assets/logo.png" alt="OpenClaw with GitHub Mode" width="500">
+  </picture>
+</p>
 
 ## Purpose
 
