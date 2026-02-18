@@ -1,6 +1,6 @@
 # 🦞 GitHub Mode: Runtime Contracts
 
-### This directory contains Task 1 contract artifacts used by GitHub mode planning and validation.
+### This directory contains contract artifacts used by GitHub mode planning and validation.
 
 <p align="center">
   <picture>
