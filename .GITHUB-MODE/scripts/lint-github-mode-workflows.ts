@@ -62,11 +62,7 @@ function validateThirdPartyRefs(relativePath: string, workflow: WorkflowDocument
         continue;
       }
 
-      const action = uses.slice(0, atIndex);
       const ref = uses.slice(atIndex + 1);
-      if (action.startsWith("actions/")) {
-        continue;
-      }
 
       if (isMutableRef(ref)) {
         errors.push(

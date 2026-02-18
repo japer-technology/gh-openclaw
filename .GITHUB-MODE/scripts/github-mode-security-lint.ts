@@ -145,7 +145,7 @@ function isThirdPartyActionRef(uses: string): boolean {
   if (uses.startsWith("./") || uses.startsWith("docker://")) {
     return false;
   }
-  return !uses.startsWith("actions/");
+  return true;
 }
 
 function validateActionPinning(relativePath: string, workflow: WorkflowDocument): string[] {

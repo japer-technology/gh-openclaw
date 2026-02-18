@@ -41,4 +41,13 @@ describe("github-mode-security-lint", () => {
       expect(error).toContain("fixtures/policy-failures-actionable.yml");
     }
   });
+
+  it("flags actions/ namespace actions using mutable refs", () => {
+    const errors = runFixture("actions-namespace-unpinned.yml");
+    expect(errors.length).toBeGreaterThanOrEqual(2);
+    const pinningErrors = errors.filter((e) => e.includes("uses non-SHA ref"));
+    expect(pinningErrors).toHaveLength(2);
+    expect(pinningErrors[0]).toContain("actions/checkout@v4");
+    expect(pinningErrors[1]).toContain("actions/upload-artifact@v4");
+  });
 });
