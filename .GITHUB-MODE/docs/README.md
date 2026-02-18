@@ -50,6 +50,8 @@ When describing local mode risk in this docs area, use **risk-focused, non-dismi
 
 Runtime contract artifacts live in [`runtime/`](../runtime/README.md) and are validated by `pnpm contracts:github:validate`.
 
+GitHub Mode package requirements are documented in [`../assets/github-mode-required-packages.json`](../assets/github-mode-required-packages.json). This list is additive and must be merged with the current root `package.json` dependency set, never used as a replacement list. Sync and validate coverage with `node --import tsx .GITHUB-MODE/scripts/validate-github-mode-package-list.ts` (it checks and auto-adds any missing GitHub Mode packages in root `package.json`).
+
 ## Extension Architecture
 
 When GitHub Mode requires TypeScript runtime code, it must follow the [extension pattern](../../extensions/) by implementing that code in `extensions/github/` rather than embedding code in `src/`.
