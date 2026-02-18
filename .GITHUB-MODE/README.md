@@ -1,4 +1,4 @@
-### ⚠️ LAUNCHING MARCH 2026
+##### ⚠️ WARNING: This project is under active development. Planned release in March 2026.
 
 # 🦞 OpenClaw with GitHub Mode
 
