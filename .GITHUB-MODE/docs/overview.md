@@ -28,7 +28,7 @@ GitHub mode exists to bring this runtime into repository workflows so teams can:
 
 ### 1.1 Core Principle
 
-**Reuse OpenClaw core paths first; add GitHub-specific adapters only where host constraints require them.**
+**Reuse OpenClaw behavior contracts at interface boundaries; extract shared libraries where needed and keep runtime implementations behind adapters.**
 
 ### 1.2 Hard Constraint
 
@@ -189,13 +189,25 @@ When a run reaches `completed` or `failed`, handoff must be explicit:
 
 ### 4.1 Shared runtime spine
 
-GitHub mode reuses these core modules:
+GitHub mode shares semantics through stable contracts, not direct imports from installed-runtime internals.
 
-- `src/auto-reply/reply`
-- `src/agents/pi-embedded-runner`
-- `src/agents/pi-tools.ts`
-- `src/agents/tools/*`
-- `src/routing/*`
+- Extract policy-neutral helpers into shared libraries with no runtime side effects.
+- Keep installed runtime behavior behind adapter boundaries that expose explicit interfaces.
+- Validate parity against contract artifacts in `.GITHUB-MODE/runtime/**`.
+
+### 4.1.1 Reuse without direct import
+
+Allowed reuse in GitHub mode must stay detached from installed runtime internals:
+
+- contract artifacts and schemas in `.GITHUB-MODE/runtime/**`
+- side-effect-free shared utility packages extracted for cross-plane use (for example: parsing, normalization, diff planning helpers)
+- validators and codec libraries that depend only on interface schemas and test fixtures
+
+Not allowed:
+
+- importing `src/**` runtime implementations into `.GITHUB-MODE/**`, workflows, or actions
+- sharing modules that trigger runtime side effects at import time (network/process/provider auth)
+- coupling GitHub orchestration to installed runtime file paths instead of adapter interfaces
 
 ### 4.2 GitHub overlay components
 
