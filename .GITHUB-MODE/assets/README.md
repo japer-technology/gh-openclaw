@@ -1,12 +1,12 @@
 # 🦞 GitHub Mode assets
 
+### Static assets used by GitHub Mode documentation and validation tooling live here.
+
 <p align="center">
   <picture>
     <img src="https://raw.githubusercontent.com/japertechnology/openclaw/main/.GITHUB-MODE/assets/logo.png" alt="OpenClaw with GitHub Mode" width="500">
   </picture>
 </p>
-
-Static assets used by GitHub Mode documentation and validation tooling live here.
 
 ## Contents
 
