@@ -80,13 +80,23 @@ When defining or implementing tasks in Phases 1–7, include where durable state
 
 ---
 
-## Cross-cutting Runtime Constraint — Extension Architecture Boundary
+## Cross-cutting Runtime Constraint — Fork-Context Source Execution
 
-GitHub Mode TypeScript runtime code must follow the extension pattern by implementing code in `extensions/github/` rather than embedding code in `src/`. See `.GITHUB-MODE/docs/README.md` and ADR 0001 for the full boundary rationale.
+GitHub Mode runs inside a fork that contains the full OpenClaw source tree. Workflows may build and execute the openclaw runtime from `src/` to leverage the actual agent execution engine, routing, tool policy, providers, and memory systems. This is the primary mechanism for delivering the "run as if installed" experience in GitHub Actions.
 
-- GitHub Mode workflows/actions must not import installed runtime internals from `src/**`.
-- New GitHub Mode runtime behavior should mirror extension packaging and dependency isolation.
-- Violation of this boundary triggers the ADR 0001 backout process.
+**Permitted fork-context patterns:**
+
+- Workflow steps that run `pnpm install && pnpm build` and then invoke the built openclaw CLI or runtime modules for agent execution, command processing, and evaluations.
+- `.GITHUB-MODE/scripts/**` that import from `src/` for runtime behavior (agent execution, routing, policy evaluation) when running inside a fork-context workflow.
+- Workflow steps that import from the built `dist/` output for programmatic access to agents, providers, routing, etc.
+
+**Fork-context constraints (must hold):**
+
+- `.GITHUB-MODE` PRs must not modify `src/**` files — src changes are upstream-owned and sync separately (enforced by `check-upstream-additions-only`).
+- Fork-context execution must pass the same pre-agent security gates before agent execution.
+- Governance scripts (contract validation, security lint, drift detection) remain contract-driven and do not require `src/` imports.
+
+This replaces the previous "Extension Architecture Boundary" constraint that prohibited all `src/` usage. See [ADR 0001 fork-context amendment](../adr/0001-runtime-boundary-and-ownership.md) for the full rationale.
 
 ---
 
@@ -592,18 +602,38 @@ Status: 🟢 Code-complete.
 
 Phase 4 readiness: Phase 2 (✅ code-complete) + Phase 3 (✅ code-complete). Both dependency gates are satisfied — security foundation (Phase 2) and validation infrastructure (Phase 3) are implemented with scripts, tests, workflows, and runtime contracts. Phase 4 implementation can begin.
 
+**Fork-context execution model:** Phase 4 workflows build the openclaw runtime from `src/` (`pnpm install && pnpm build`) and invoke it for agent execution, command processing, routing, tool policy enforcement, and provider calls. This is the primary mechanism for running openclaw's "magic" — the same agent engine, auto-reply orchestration, routing logic, and tool policy system that powers the installed runtime now powers GitHub Mode commands. See [ADR 0001 fork-context amendment](../adr/0001-runtime-boundary-and-ownership.md).
+
+**Key `src/` modules used by Phase 4:**
+
+| Module | Source path | Purpose in GitHub Mode |
+| --- | --- | --- |
+| Agent runner | `src/agents/` | Core execution engine — runs agent tasks, manages tool invocation, sandbox |
+| Auto-reply | `src/auto-reply/` | Orchestration layer — reply generation, model interaction, conversation flow |
+| Routing | `src/routing/` | Agent route resolution — determines which agent handles a given command |
+| Tool policy | `src/agents/tool-policy.ts` | Policy gates for tool usage during agent execution |
+| Providers | `src/providers/` | Model provider integrations (Anthropic, OpenAI, etc.) for inference |
+| Security | `src/security/` | Audit, tool policy validation, skill scanning |
+| Config | `src/config/` | Configuration loading, validation, and merging |
+| Memory | `src/memory/` | Conversation memory for agent context |
+| Sessions | `src/sessions/` | Session state management for agent conversations |
+| Plugins | `src/plugins/`, `src/plugin-sdk/` | Plugin system and SDK for extensibility |
+| Hooks | `src/hooks/` | Internal event system for lifecycle events |
+| Infrastructure | `src/infra/` | Environment handling, networking, process management |
+
 ### Task 4.1 — Command Workflow Implementation
 
 Status: ✅ Complete.
 
 **Workstream:** WS-D (Command runtime and bot PR loop)
 
-**Scope:** Implement `github-mode-command.yml`, `github-mode-agent-run.yml`, `github-mode-bot-pr.yml`.
+**Scope:** Implement `github-mode-command.yml`, `github-mode-agent-run.yml`, `github-mode-bot-pr.yml`. These workflows build the openclaw runtime from `src/` and use it for actual agent execution.
 
 **Acceptance Criteria:**
 
 - All three workflows execute in intended sequence.
-- Command baseline (explain, refactor, test, diagram) is supported.
+- Workflows include a build-from-source step (`pnpm install && pnpm build`) before agent execution.
+- Command baseline (explain, refactor, test, diagram) is executed via the actual openclaw agent engine (`src/agents/`).
 - `github-mode-command.yml` and `github-mode-agent-run.yml` run blocking pre-agent gates in this order: skill/package scan, lockfile/provenance checks, policy evaluation.
 - Gates are fail-closed: any gate failure or indeterminate decision stops workflow before agent execution.
 - Each gate emits a minimal pass/fail record in summary + artifact:
@@ -611,7 +641,7 @@ Status: ✅ Complete.
   - `result=<PASS|FAIL>`
   - `reason=<short machine-parseable reason>`
   - `evidence=<artifact-or-log-reference>`
-- End-to-end command-to-PR works for trusted users.
+- End-to-end command-to-PR works for trusted users using the built openclaw runtime.
 
 **Evidence References:**
 
@@ -742,7 +772,7 @@ Status: ✅ Complete.
 
 **Workstream:** WS-D
 
-**Scope:** Implement the durable persistent-memory layer defined in `.GITHUB-MODE/docs/planning/implementation-plan.md` §2.1 so agent context survives runner teardown. Runner filesystem is never a source of truth.
+**Scope:** Implement the durable persistent-memory layer defined in `.GITHUB-MODE/docs/planning/implementation-plan.md` §2.1 so agent context survives runner teardown. Runner filesystem is never a source of truth. This builds on the existing memory system in `src/memory/` and session management in `src/sessions/`, adapting them for the stateless GitHub Actions environment with external persistence.
 
 **Acceptance Criteria:**
 

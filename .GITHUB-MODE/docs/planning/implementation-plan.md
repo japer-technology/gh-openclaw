@@ -58,7 +58,7 @@ These hold across every phase and are enforced in CI, review, and runtime:
 3. **Least-privilege by default.** No privileged workflow execution from untrusted actors or contexts. Trigger trust levels defined in [Security 0001](../security/0001-github-trigger-trust-matrix.md).
 4. **SHA-pinned actions.** All third-party actions pinned to full commit SHA.
 5. **PR-mediated mutation only.** All privileged branch mutations occur via PR workflow; never direct writes to protected branches.
-6. **Extension boundary.** GitHub Mode TypeScript runtime code lives in `extensions/github/`, never in `src/`. GitHub Mode workflows must not import `src/**` internals ([ADR 0001](../adr/0001-runtime-boundary-and-ownership.md)).
+6. **Fork-context src usage.** GitHub Mode workflows build and run the openclaw runtime from `src/` to leverage agents, routing, tool policy, providers, and memory — this is the core "run as if installed" mechanism. `.GITHUB-MODE` PRs must not modify `src/**` files (upstream-owned). Governance scripts (contract validation, security lint) remain contract-driven and do not require `src/` imports. See [ADR 0001 fork-context amendment](../adr/0001-runtime-boundary-and-ownership.md).
 7. **Upstream sync safety.** All changes must be purely additive to owned paths so the fork can cleanly pull upstream OpenClaw upgrades.
 8. **Vetted skill supply chain.** Only skills passing the quarantine pipeline ([Security 0002](../security/0002-skills-quarantine-pipeline.md)) can run in trusted GitHub Mode workflows.
 
@@ -290,17 +290,21 @@ Required behaviors:
 
 **Status:** Not started. **Depends on:** Phase 2 + Phase 3.
 
-This is the largest and most complex phase. It delivers the core collaborative value: trusted commands from GitHub surfaces produce bot PRs with full provenance.
+This is the largest and most complex phase. It delivers the core collaborative value: trusted commands from GitHub surfaces produce bot PRs with full provenance. **This phase leverages the fork-context execution path** ([ADR 0001 amendment](../adr/0001-runtime-boundary-and-ownership.md)) — workflows build the openclaw runtime from `src/` and run it inside GitHub Actions to deliver the full "run as if installed" experience.
+
+**Core execution model:**
+
+Workflows run `pnpm install && pnpm build` to produce the openclaw runtime, then invoke it for agent execution, routing decisions, tool policy enforcement, and provider calls. This means the same agent engine (`src/agents/`), auto-reply orchestration (`src/auto-reply/`), routing logic (`src/routing/`), tool policy gates (`src/agents/tool-policy.ts`), provider integrations (`src/providers/`), memory management (`src/memory/`), and security checks (`src/security/`) that power the installed runtime also power GitHub Mode commands.
 
 **Deliverables:**
 
-1. **Command and agent workflows:** `github-mode-command.yml`, `github-mode-agent-run.yml`, `github-mode-bot-pr.yml`.
-2. **MVP command set:** `explain`, `refactor`, `test`, `diagram`.
+1. **Command and agent workflows:** `github-mode-command.yml`, `github-mode-agent-run.yml`, `github-mode-bot-pr.yml` — all build from source and invoke the openclaw runtime.
+2. **MVP command set:** `explain`, `refactor`, `test`, `diagram` — executed via the actual openclaw agent engine from `src/agents/`.
 3. **Trust-aware authorization:** command authorization checked against trust levels before any adapter invocation.
 4. **Pre-agent security gates** (fail-closed, deterministic order):
    - Skill/package scan → lockfile/provenance checks → policy evaluation.
    - Each gate emits `gate`, `result`, `reason`, `evidence` to summary and artifact.
-5. **State adapter pipeline:** hydrate snapshot → validate schema → run agent → upload snapshot atomically → record run metadata. Storage target selected by latency/cost/access-control evaluation (see [implementation-tasks.md Task 4.7](implementation-tasks.md)).
+5. **State adapter pipeline:** hydrate snapshot → validate schema → run agent (using `src/agents/pi-embedded-runner` and `src/auto-reply/`) → upload snapshot atomically → record run metadata. Storage target selected by latency/cost/access-control evaluation (see [implementation-tasks.md Task 4.7](implementation-tasks.md)).
 6. **Provenance metadata:** source command, commit SHA, run id, policy version embedded in every output.
 7. **Protected branch controls:** all mutations via bot branch + PR; never direct writes.
 8. **UX progress checkpoints** ([overview.md §3.3–3.4](../overview.md)):
@@ -313,7 +317,8 @@ This is the largest and most complex phase. It delivers the core collaborative v
 
 **Exit criteria:**
 
-- Trusted users can trigger command-to-PR flow end-to-end.
+- Trusted users can trigger command-to-PR flow end-to-end using the built openclaw runtime.
+- Agent execution uses `src/agents/` and `src/auto-reply/` for actual AI reasoning and tool invocation.
 - Agent execution cannot run unless all three pre-agent gates pass.
 - Untrusted users cannot invoke privileged adapters or secret-backed paths.
 - UX checkpoints render correctly in CLI and GitHub surfaces.
@@ -486,7 +491,7 @@ All must be true before broad rollout:
 GitHub Mode implementation is complete when:
 
 1. Installed runtime remains behaviorally stable under regression checks.
-2. High-value OpenClaw orchestration, policy, and eval paths run in GitHub Mode using shared core modules via the extension boundary.
+2. High-value OpenClaw orchestration, agent execution, routing, tool policy, and eval paths run in GitHub Mode by building and invoking the openclaw runtime from `src/` (fork-context execution per [ADR 0001 amendment](../adr/0001-runtime-boundary-and-ownership.md)).
 3. Security controls are fully GitHub-native, continuously enforced, and include supply-chain vetting.
 4. Command-to-PR automation is policy-governed, auditable, and safe by default.
 5. Promotions are approval-gated with verified attestations.

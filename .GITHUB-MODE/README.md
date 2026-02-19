@@ -39,15 +39,18 @@ If you need repeatability across contributors and repositories, GitHub Mode is t
 
 ## Scope and boundaries
 
-GitHub Mode intentionally separates ownership between installed runtime and repo runtime:
+GitHub Mode runs inside a fork that contains the full OpenClaw source tree. The fork-context execution model builds and runs the openclaw runtime from `src/` to deliver the "run as if installed" experience within GitHub Actions.
 
-- Installed runtime internals stay in `src/**`.
-- GitHub Mode orchestration lives in `.github/**` and contract/runtime assets under `.GITHUB-MODE/runtime/**`.
-- GitHub Mode TypeScript runtime behavior should follow extension architecture (`extensions/github/`) instead of coupling to `src/**` internals.
+**Two layers work together:**
+
+- **Execution layer (uses src):** Workflows build openclaw from source (`pnpm install && pnpm build`) and run the actual agent engine, routing, tool policy, providers, and memory systems. This is the core "magic" — the same runtime that powers the installed experience.
+- **Governance layer (contract-driven):** Contract validation, security lint, drift detection, and policy enforcement use `.GITHUB-MODE/runtime/` contracts without importing `src/`. This adds safety and auditability on top.
+
+**Key constraint:** `.GITHUB-MODE` PRs must not modify `src/**` files. Source changes are upstream-owned and sync separately.
 
 For architecture rationale, read:
 
-- ADR 0001 Runtime Boundary and Ownership: https://github.com/openclaw/openclaw/blob/main/.GITHUB-MODE/docs/adr/0001-runtime-boundary-and-ownership.md
+- ADR 0001 Runtime Boundary and Ownership (with fork-context amendment): https://github.com/openclaw/openclaw/blob/main/.GITHUB-MODE/docs/adr/0001-runtime-boundary-and-ownership.md
 - ADR 0002 Installed Runtime Non-Regression Guardrails: https://github.com/openclaw/openclaw/blob/main/.GITHUB-MODE/docs/adr/0002-installed-runtime-non-regression-guardrails.md
 
 ---

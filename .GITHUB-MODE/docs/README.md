@@ -58,15 +58,25 @@ Runtime contract artifacts live in [`runtime/`](../runtime/README.md) and are va
 
 GitHub Mode package requirements are documented in [`../assets/github-mode-required-packages.json`](../assets/github-mode-required-packages.json). This list is additive and must be merged with the current root `package.json` dependency set, never used as a replacement list. Sync and validate coverage with `node --import tsx .GITHUB-MODE/scripts/validate-github-mode-package-list.ts` (it checks and auto-adds any missing GitHub Mode packages in root `package.json`).
 
-## Extension Architecture
+## Extension Architecture and Fork-Context Execution
 
-When GitHub Mode requires TypeScript runtime code, it must follow the [extension pattern](../../extensions/) by implementing that code in `extensions/github/` rather than embedding code in `src/`.
+GitHub Mode uses **two complementary patterns** for running OpenClaw behavior:
 
-This is a hard boundary, not a preference:
+### Fork-context src execution (primary)
 
-- [ADR 0001](adr/0001-runtime-boundary-and-ownership.md) assigns `src/**` ownership to installed runtime flows and assigns GitHub Mode ownership to `.github/**` orchestration plus `.GITHUB-MODE/runtime/**` contracts.
-- ADR 0001 explicitly prohibits GitHub Mode workflows/actions from importing installed runtime internals from `src/**`.
-- Existing extensions are the reference implementation for this boundary: new GitHub Mode runtime behavior should mirror extension packaging and dependency isolation instead of creating new `src/**` coupling.
+Since the fork contains the full OpenClaw source tree, execution workflows build and run the openclaw runtime directly from `src/`. This is the primary mechanism for delivering the "run as if installed" experience — the same agent engine, auto-reply orchestration, routing, tool policy, providers, and memory that power the installed runtime also power GitHub Mode commands.
+
+- Workflows run `pnpm install && pnpm build` then invoke the built openclaw CLI or runtime modules.
+- `.GITHUB-MODE` PRs must not modify `src/**` files (upstream-owned; enforced by `check-upstream-additions-only`).
+- See [ADR 0001 fork-context amendment](adr/0001-runtime-boundary-and-ownership.md) for the full rationale.
+
+### Extension pattern (optional, for GitHub-specific runtime code)
+
+When GitHub Mode needs TypeScript runtime code that is specific to the GitHub execution environment (not present in upstream `src/`), it should follow the [extension pattern](../../extensions/) by implementing that code in `extensions/github/`.
+
+### Governance layer (contract-driven, no src imports)
+
+Governance scripts (contract validation, security lint, drift detection) remain contract-driven and do not require `src/` imports. They validate `.GITHUB-MODE/runtime/` contracts and lint workflow YAML files.
 
 ## Upstream Sync Guard
 
@@ -87,16 +97,20 @@ Everything else is upstream-owned. Modifications to upstream files will fail the
 
 ## Maintenance During Ongoing Development
 
-These docs are designed to withstand continuous OpenClaw core evolution by following three isolation principles:
+These docs are designed to withstand continuous OpenClaw core evolution by following these isolation principles:
 
-1. **No `src/` import coupling.** GitHub Mode docs reference `src/` paths only descriptively (in analysis snapshots). No doc tooling, validation, or navigation depends on `src/` internal structure. When `src/` paths change, update the analysis snapshots but nothing else breaks.
+1. **Fork-context execution leverages `src/` directly.** Execution workflows build and run `src/` as-is. When `src/` changes via upstream sync, the fork automatically picks up improvements — no manual adaptation needed.
 
-2. **Contract-first validation.** Runtime contracts in `.GITHUB-MODE/runtime/` are the only machine-validated artifacts. The validation script (`.GITHUB-MODE/scripts/validate-github-runtime-contracts.ts`) checks contract structure, not doc prose. This means core refactors do not break doc validation.
+2. **Governance scripts do not import `src/`.** Contract validation, security lint, and drift detection use `.GITHUB-MODE/runtime/` contracts. Core refactors do not break governance validation.
 
-3. **Analysis snapshots are explicitly dated.** `analysis/directories.md` and `analysis/libraries.md` are point-in-time snapshots with staleness notes. Regenerate them when the codebase structure or dependency set changes materially.
+3. **`.GITHUB-MODE` PRs must not modify `src/**` files.** The `check-upstream-additions-only` script enforces this. Source changes arrive via upstream sync.
+
+4. **Contract-first validation.** Runtime contracts in `.GITHUB-MODE/runtime/` are the only machine-validated governance artifacts. The validation script (`.GITHUB-MODE/scripts/validate-github-runtime-contracts.ts`) checks contract structure, not doc prose.
+
+5. **Analysis snapshots are explicitly dated.** `analysis/directories.md` and `analysis/libraries.md` are point-in-time snapshots with staleness notes. Regenerate them when the codebase structure or dependency set changes materially.
 
 When touching these docs during core development:
 
 - Keep internal links relative (not root-relative) so they resolve on GitHub without Mintlify navigation.
-- Do not add `src/` imports or runtime dependencies to validation scripts.
+- Do not add `src/` imports to governance scripts (contract validation, security lint).
 - Update analysis snapshots only when relevant structure changes; do not block unrelated PRs on snapshot freshness.
