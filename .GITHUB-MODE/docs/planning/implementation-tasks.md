@@ -653,6 +653,8 @@ Status: ✅ Complete.
 
 ### Task 4.3 — Policy-Gated Adapter Invocation
 
+Status: ✅ Complete.
+
 **Workstream:** WS-C
 
 **Scope:** Ensure adapter invocations are policy-checked before execution.
@@ -662,6 +664,15 @@ Status: ✅ Complete.
 - Every adapter call has policy decision evidence.
 - Policy failures halt execution safely.
 - Decision metadata is persisted in artifacts.
+
+**Evidence References:**
+
+- `.GITHUB-MODE/scripts/enforce-policy-gated-adapter.ts`
+- `.GITHUB-MODE/test/enforce-policy-gated-adapter.test.ts`
+- `.GITHUB-MODE/runtime/command-policy.json`
+- `.GITHUB-MODE/runtime/adapter-contracts.json`
+- `.github/workflows/github-mode-command.yml`
+- `.github/workflows/github-mode-agent-run.yml`
 
 ---
 
