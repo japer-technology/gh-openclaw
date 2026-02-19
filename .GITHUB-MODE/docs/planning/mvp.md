@@ -235,3 +235,14 @@ With Task 0 complete, the fastest path to MVP is a constrained execution slice a
 ### 10.3 MVP completion gate (unchanged)
 
 MVP is complete only when all section 7 acceptance criteria are satisfied. This execution slice is intended to reach those criteria quickly without pulling in non-MVP scope.
+
+---
+
+## 11) Spec Growth Guardrail (Implementation Ratio)
+
+To prevent planning docs from outpacing delivered runtime behavior, maintainers must satisfy this gate **before adding new phase-spec artifacts** under `.GITHUB-MODE/docs/planning/`:
+
+- Minimum operational capability count: **2** capabilities marked `operational` in `.GITHUB-MODE/runtime/implementation-scoreboard.json`.
+- New phase spec additions must update the scoreboard in the same PR so implementation-vs-spec drift stays explicit and reviewable.
+
+If this minimum is not met, defer new phase specs and prioritize converting existing `spec-only`/`scaffold` capabilities to `operational` first.

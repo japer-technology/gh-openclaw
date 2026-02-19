@@ -17,6 +17,7 @@
 - Governance approval validation (`validate-governance-approvals.ts`).
 - Upstream safety checks (`check-upstream-additions-only.ts`).
 - Docs boundary consistency checks (`check-runtime-boundary-doc-consistency.ts`).
+- Implementation scoreboard guard + summary (`check-implementation-scoreboard.ts`).
 
 ## Usage
 

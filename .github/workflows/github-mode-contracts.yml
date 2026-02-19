@@ -47,6 +47,13 @@ jobs:
       - run: node --import tsx .GITHUB-MODE/scripts/validate-governance-approvals.ts
       - run: pnpm contracts:github:validate
       - run: node --import tsx .GITHUB-MODE/scripts/validate-github-mode-package-list.ts
+      - run: node --import tsx .GITHUB-MODE/scripts/check-implementation-scoreboard.ts
+      - name: Publish implementation scoreboard summary
+        run: |
+          {
+            echo "## Implementation scoreboard"
+            node --import tsx .GITHUB-MODE/scripts/check-implementation-scoreboard.ts --summary
+          } >> "$GITHUB_STEP_SUMMARY"
 
   check-additions-only:
     runs-on: ubuntu-latest

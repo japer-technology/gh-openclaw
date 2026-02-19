@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "pr-contract-validation",
+      "description": "Required PR checks validate .GITHUB-MODE runtime contracts and trust-safe execution.",
+      "state": "operational",
+      "evidence": [".github/workflows/github-mode-contracts.yml"]
+    },
+    {
+      "id": "trusted-command-bot-pr",
+      "description": "Trusted maintainer commands can execute and produce bot-authored pull requests end-to-end.",
+      "state": "spec-only",
+      "evidence": [".GITHUB-MODE/docs/planning/mvp.md"]
+    },
+    {
+      "id": "untrusted-privilege-blocking",
+      "description": "Untrusted actors are blocked from privileged adapters and secret-backed paths.",
+      "state": "scaffold",
+      "evidence": [
+        ".GITHUB-MODE/runtime/trust-levels.json",
+        ".GITHUB-MODE/runtime/command-policy.json"
+      ]
+    },
+    {
+      "id": "parity-snapshot-visibility",
+      "description": "Parity matrix artifacts are generated and visible to reviewers in CI summaries.",
+      "state": "scaffold",
+      "evidence": [".GITHUB-MODE/runtime/parity-matrix.json"]
+    },
+    {
+      "id": "installed-runtime-non-regression",
+      "description": "Installed runtime behavior remains unchanged while GitHub Mode evolves.",
+      "state": "scaffold",
+      "evidence": [".GITHUB-MODE/docs/adr/0002-installed-runtime-non-regression-guardrails.md"]
+    }
+  ]
+}
