@@ -66,7 +66,7 @@ jobs:
           COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           set -euo pipefail
-          RESULT=$(COMMENT_BODY="$COMMENT_BODY" node --import tsx .GITHUB-MODE/scripts/parse-issue-command.ts 2>&1) || {
+          RESULT=$(node --import tsx .GITHUB-MODE/scripts/parse-issue-command.ts 2>&1) || {
             echo "::notice::Comment is not a valid /openclaw command. Skipping."
             echo "command=" >> "$GITHUB_OUTPUT"
             echo "target=" >> "$GITHUB_OUTPUT"
@@ -186,26 +186,26 @@ jobs:
           TARGET: ${{ needs.parse-and-gate.outputs.target }}
         run: |
           set -euo pipefail
-          BODY="### GitHub Mode Agent Response
-
-          **Command:** \`${COMMAND}\`"
-          if [ -n "${TARGET:-}" ]; then
-            BODY="${BODY}
-          **Target:** \`${TARGET}\`"
-          fi
-          BODY="${BODY}
-          **Run:** [\`${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          **Status:** ${{ job.status }}
-
-          ---
-          _Automated response from GitHub Mode issue agent._"
+          {
+            echo "### GitHub Mode Agent Response"
+            echo ""
+            echo "**Command:** \`${COMMAND}\`"
+            if [ -n "${TARGET:-}" ]; then
+              echo "**Target:** \`${TARGET}\`"
+            fi
+            echo "**Run:** [\`${{ github.run_id }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            echo "**Status:** ${{ job.status }}"
+            echo ""
+            echo "---"
+            echo "_Automated response from GitHub Mode issue agent._"
+          } > "$RUNNER_TEMP/github-mode-issue-comment.md"
 
           # Truncate to 60000 chars (inspired by gitclaw §5.11)
-          BODY="${BODY:0:60000}"
+          head -c 60000 "$RUNNER_TEMP/github-mode-issue-comment.md" > "$RUNNER_TEMP/github-mode-issue-comment-truncated.md"
 
           gh issue comment "$ISSUE_NUMBER" \
             --repo "${{ github.repository }}" \
-            --body "$BODY" || echo "::warning::Failed to post agent response comment"
+            --body-file "$RUNNER_TEMP/github-mode-issue-comment-truncated.md" || echo "::warning::Failed to post agent response comment"
 
       # Cleanup: remove 👀 reaction (inspired by gitclaw §5.12 finally block)
       - name: Remove eyes reaction
@@ -215,13 +215,13 @@ jobs:
         run: |
           # Best-effort cleanup — errors are logged but non-fatal (gitclaw §8)
           COMMENT_ID="${{ github.event.comment.id }}"
-          REACTIONS=$(gh api \
+          REACTION_ID=$(gh api \
             "/repos/${{ github.repository }}/issues/comments/${COMMENT_ID}/reactions" \
-            --jq '[.[] | select(.content == "eyes" and .user.login == "github-actions[bot]")] | .[0].id' \
+            --jq '[.[] | select(.content == "eyes" and .user.login == "github-actions[bot]")] | .[0].id // empty' \
             2>/dev/null || echo "")
-          if [ -n "$REACTIONS" ] && [ "$REACTIONS" != "null" ]; then
+          if [ -n "$REACTION_ID" ] && echo "$REACTION_ID" | grep -qE '^[0-9]+$'; then
             gh api --method DELETE \
-              "/repos/${{ github.repository }}/issues/comments/${COMMENT_ID}/reactions/${REACTIONS}" \
+              "/repos/${{ github.repository }}/issues/comments/${COMMENT_ID}/reactions/${REACTION_ID}" \
               2>/dev/null || echo "::notice::Could not remove eyes reaction (non-fatal)"
           fi
 
