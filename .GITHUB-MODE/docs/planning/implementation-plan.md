@@ -253,7 +253,7 @@ Phase 1 proceeds only while this evidence remains valid.
 
 ### Phase 3 — Core validation, simulation, eval, and cost workflows
 
-**Status:** Code-complete. **Depends on:** Phase 1 ✅. **Can run in parallel with:** Phase 2 ✅.
+**Status:** ✅ Code-complete. **Depends on:** Phase 1 ✅. **Can run in parallel with:** Phase 2 ✅.
 
 **Deliverables:**
 
