@@ -159,6 +159,19 @@
       ]
     },
     {
+      "id": "phase4-policy-gated-adapter",
+      "description": "Policy-gated adapter invocation enforces command-policy checks before adapter execution with decision evidence persisted in artifacts.",
+      "state": "operational",
+      "evidence": [
+        ".GITHUB-MODE/scripts/enforce-policy-gated-adapter.ts",
+        ".GITHUB-MODE/test/enforce-policy-gated-adapter.test.ts",
+        ".GITHUB-MODE/runtime/command-policy.json",
+        ".GITHUB-MODE/runtime/adapter-contracts.json",
+        ".github/workflows/github-mode-command.yml",
+        ".github/workflows/github-mode-agent-run.yml"
+      ]
+    },
+    {
       "id": "parity-snapshot-visibility",
       "description": "Parity matrix artifacts are generated and visible to reviewers in CI summaries.",
       "state": "scaffold",
