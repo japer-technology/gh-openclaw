@@ -90,6 +90,36 @@ describe("check-template-drift", () => {
     const result = checkTemplateDrift(root);
     expect(result.drifted).toBe(false);
   });
+
+  it("detects missing required label in labeler.yml", () => {
+    const root = createFixtureRoot(
+      { ...VALID_BASELINE, requiredLabels: ["github-mode"] },
+      {
+        ".GITHUB-MODE/ACTIVE.md": "active",
+        ".github/workflows/github-mode-check.yml": "name: check",
+      },
+    );
+
+    const result = checkTemplateDrift(root);
+    expect(result.drifted).toBe(true);
+    expect(result.findings.some((f) => f.category === "missing-label")).toBe(true);
+  });
+
+  it("passes when required label exists in labeler.yml", () => {
+    const root = createFixtureRoot(
+      { ...VALID_BASELINE, requiredLabels: ["github-mode"] },
+      {
+        ".GITHUB-MODE/ACTIVE.md": "active",
+        ".github/workflows/github-mode-check.yml": "name: check",
+        ".github/labeler.yml":
+          '"github-mode":\n  - changed-files:\n      - any-glob-to-any-file:\n          - ".GITHUB-MODE/**"\n',
+      },
+    );
+
+    const result = checkTemplateDrift(root);
+    expect(result.drifted).toBe(false);
+    expect(result.findings).toHaveLength(0);
+  });
 });
 
 describe("validateTemplateBaselineContract", () => {

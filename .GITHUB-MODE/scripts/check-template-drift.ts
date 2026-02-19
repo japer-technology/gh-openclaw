@@ -63,6 +63,27 @@ export function checkTemplateDrift(root: string): TemplateDriftResult {
     }
   }
 
+  const requiredLabels = baseline.requiredLabels;
+  if (Array.isArray(requiredLabels)) {
+    const labelerPath = path.join(root, ".github", "labeler.yml");
+    const labelerContent = existsSync(labelerPath) ? readFileSync(labelerPath, "utf8") : "";
+
+    for (const label of requiredLabels) {
+      if (typeof label !== "string") {
+        continue;
+      }
+      const labelPattern = new RegExp(`^"${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}":`, "m");
+      if (!labelPattern.test(labelerContent)) {
+        findings.push({
+          category: "missing-label",
+          item: label,
+          message: `Required label "${label}" is not configured in .github/labeler.yml.`,
+          guidance: `Add a "${label}" entry to .github/labeler.yml so PRs touching related paths are auto-labeled.`,
+        });
+      }
+    }
+  }
+
   return { drifted: findings.length > 0, findings };
 }
 

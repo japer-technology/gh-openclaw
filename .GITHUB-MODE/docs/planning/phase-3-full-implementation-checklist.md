@@ -49,10 +49,11 @@ This checklist answers: "What tasks are needed for Phase 3 in `.GITHUB-MODE` to 
 ### Task 3.5 — Template Drift + Migration Guidance
 
 - Template drift script: `.GITHUB-MODE/scripts/check-template-drift.ts`
-- Tests: `.GITHUB-MODE/test/check-template-drift.test.ts` (8 test cases)
+- Tests: `.GITHUB-MODE/test/check-template-drift.test.ts` (10 test cases)
 - Runtime contract: `.GITHUB-MODE/runtime/template-baseline.json`
+- Label auto-labeling: `.github/labeler.yml` (`github-mode` entry for `.GITHUB-MODE/**` paths)
 - CI enforcement: `.github/workflows/github-mode-sync-templates.yml`
-- Acceptance criteria met: drift detected against template baseline, guidance generated in findings, required checks remain green when drift is resolved.
+- Acceptance criteria met: drift detected against template baseline (files, workflows, and labels), guidance generated in findings, required checks remain green when drift is resolved.
 
 ## Verification tasks to keep Phase 3 complete
 
