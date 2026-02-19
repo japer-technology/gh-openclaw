@@ -180,8 +180,36 @@ jobs:
           GITHUB_MODE_COMMAND: ${{ inputs.command }}
           GITHUB_MODE_TARGET: ${{ inputs.target }}
         run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/github-mode-command-output"
+          
           echo "Command dispatched: $GITHUB_MODE_COMMAND on $GITHUB_MODE_TARGET"
-          echo "Agent execution placeholder — awaiting Task 4.7 state adapter pipeline."
+          
+          # Build agent message based on command and target
+          case "$GITHUB_MODE_COMMAND" in
+            explain)
+              AGENT_MESSAGE="Explain the code in $GITHUB_MODE_TARGET. Provide a clear, detailed explanation of what it does, how it works, and any important patterns or design decisions."
+              ;;
+            refactor)
+              AGENT_MESSAGE="Analyze $GITHUB_MODE_TARGET and suggest refactoring improvements. Focus on code quality, maintainability, and best practices. Make the changes if appropriate."
+              ;;
+            test)
+              AGENT_MESSAGE="Review $GITHUB_MODE_TARGET and create or improve tests for it. Ensure good coverage and test important edge cases. Create the test files."
+              ;;
+            diagram)
+              AGENT_MESSAGE="Create a diagram or visual representation of the architecture/flow in $GITHUB_MODE_TARGET. Explain the relationships and data flow."
+              ;;
+            *)
+              AGENT_MESSAGE="$GITHUB_MODE_COMMAND: $GITHUB_MODE_TARGET"
+              ;;
+          esac
+          
+          # Execute OpenClaw agent
+          echo "Executing: pnpm openclaw agent --message \"$AGENT_MESSAGE\" --thinking high"
+          pnpm openclaw agent --message "$AGENT_MESSAGE" --thinking high \
+            2>&1 | tee "$RUNNER_TEMP/github-mode-command-output/agent-log.txt"
+          
+          echo "Agent execution completed"
 
       - name: Emit dispatch evidence
         run: |
@@ -208,8 +236,27 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: github-mode-command-dispatch-evidence
-          path: ${{ runner.temp }}/github-mode-command-dispatch/evidence.json
+          path: ${{ runner.temp }}/github-mode-command-dispatch/
           retention-days: 90
+      
+      - name: Upload command output
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: github-mode-command-output
+          path: ${{ runner.temp }}/github-mode-command-output/
+          retention-days: 90
+      
+      - name: Add command output to summary
+        if: always()
+        run: |
+          {
+            echo "## Agent Output"
+            echo ""
+            echo "\`\`\`"
+            tail -n 100 "$RUNNER_TEMP/github-mode-command-output/agent-log.txt" || echo "No agent output available"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   bot-pr:
     needs:

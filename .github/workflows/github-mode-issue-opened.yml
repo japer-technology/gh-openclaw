@@ -1,0 +1,80 @@
+name: GitHub Mode Issue Opened
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  check-trigger:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      command: ${{ steps.check.outputs.command }}
+      target: ${{ steps.check.outputs.target }}
+    steps:
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+      - uses: ./.github/actions/setup-node-env
+      - name: Enforce GitHub Mode activation
+        run: node --import tsx .GITHUB-MODE/scripts/check-github-mode-active.ts
+      
+      - name: Check if issue should trigger agent
+        id: check
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_LABELS: ${{ toJson(github.event.issue.labels.*.name) }}
+        run: |
+          set -euo pipefail
+          
+          # Check if issue has the 'openclaw' label
+          if echo "$ISSUE_LABELS" | jq -e 'index("openclaw")' > /dev/null; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "command=explain" >> "$GITHUB_OUTPUT"
+            
+            # Try to extract target from issue body (look for file paths)
+            TARGET=$(echo "$ISSUE_BODY" | grep -oP '(?<=```)\w+\s+[^\n]+(?=```)' | head -1 || echo "issue content")
+            if [ -z "$TARGET" ]; then
+              TARGET="Issue: $ISSUE_TITLE"
+            fi
+            
+            echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+            echo "Will analyze issue: $TARGET"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Issue does not have 'openclaw' label - skipping"
+          fi
+      
+      - name: Add reaction to issue
+        if: steps.check.outputs.should_run == 'true'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            await github.rest.reactions.createForIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              content: 'rocket'
+            });
+
+  dispatch-to-agent:
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_run == 'true'
+    uses: ./.github/workflows/github-mode-agent-run.yml
+    permissions:
+      contents: read
+    with:
+      command: ${{ needs.check-trigger.outputs.command }}
+      target: ${{ needs.check-trigger.outputs.target }}
+      run_context: |
+        {
+          "issue_number": "${{ github.event.issue.number }}",
+          "issue_title": "${{ github.event.issue.title }}",
+          "trigger": "issue_opened"
+        }

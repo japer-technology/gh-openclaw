@@ -1,0 +1,87 @@
+name: GitHub Mode Issue Comment
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  parse-command:
+    if: |
+      github.event.issue.pull_request == null &&
+      startsWith(github.event.comment.body, '/openclaw ')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      should_run: ${{ steps.parse.outputs.should_run }}
+      command: ${{ steps.parse.outputs.command }}
+      target: ${{ steps.parse.outputs.target }}
+    steps:
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+      - uses: ./.github/actions/setup-node-env
+      - name: Enforce GitHub Mode activation
+        run: node --import tsx .GITHUB-MODE/scripts/check-github-mode-active.ts
+      
+      - name: Parse command from comment
+        id: parse
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -euo pipefail
+          
+          # Extract command (e.g., "/openclaw explain src/agent.ts")
+          if echo "$COMMENT_BODY" | grep -q '^/openclaw '; then
+            # Remove the /openclaw prefix
+            COMMAND_LINE=$(echo "$COMMENT_BODY" | sed 's|^/openclaw ||')
+            
+            # Extract the command (first word)
+            COMMAND=$(echo "$COMMAND_LINE" | awk '{print $1}')
+            
+            # Extract the target (everything after the first word)
+            TARGET=$(echo "$COMMAND_LINE" | cut -d' ' -f2-)
+            
+            # Validate command is one of the allowed ones
+            case "$COMMAND" in
+              explain|refactor|test|diagram)
+                echo "should_run=true" >> "$GITHUB_OUTPUT"
+                echo "command=$COMMAND" >> "$GITHUB_OUTPUT"
+                echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+                echo "Parsed command: $COMMAND target: $TARGET"
+                ;;
+              *)
+                echo "should_run=false" >> "$GITHUB_OUTPUT"
+                echo "Unknown command: $COMMAND"
+                ;;
+            esac
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+      
+      - name: Add reaction to comment
+        if: steps.parse.outputs.should_run == 'true'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+  dispatch-to-command:
+    needs: parse-command
+    if: needs.parse-command.outputs.should_run == 'true'
+    uses: ./.github/workflows/github-mode-command.yml
+    permissions:
+      contents: read
+      pull-requests: read
+    with:
+      command: ${{ needs.parse-command.outputs.command }}
+      target: ${{ needs.parse-command.outputs.target }}
+      open_bot_pr: false
