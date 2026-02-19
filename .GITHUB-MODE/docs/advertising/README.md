@@ -8,4 +8,4 @@
   </picture>
 </p>
 
-- OpenClaw-GitHub: daily-synced GitHub runtime extension of OpenClaw: no local install required!
+### gh-openclaw: daily-synced GitHub runtime extension of OpenClaw - no local install required
