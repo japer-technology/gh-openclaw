@@ -27,12 +27,12 @@ Working definition used here: the smallest product increment that enables valida
 
 ### 2.1 In scope
 
-- Shared runtime reuse for core orchestration + tool-policy paths where feasible.
+- **Fork-context src execution** — workflows build and run the openclaw runtime from `src/` for agent execution, routing, tool policy, and provider calls (per [ADR 0001 fork-context amendment](../adr/0001-runtime-boundary-and-ownership.md)).
 - `.GITHUB-MODE/runtime/` contract scaffolding with schema validation in CI.
 - Security baseline for GitHub workflows (least privilege, SHA-pinned actions, trust-tiered behavior).
 - Three baseline workflow classes:
   - PR validation/checks
-  - Trusted command-to-bot-PR flow
+  - Trusted command-to-bot-PR flow (using the built openclaw agent engine from `src/agents/`)
   - Drift/policy visibility artifacts
 
 ### 2.2 Explicitly out of scope for MVP
