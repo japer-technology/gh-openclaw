@@ -419,9 +419,11 @@ Status: 🟢 Code-complete.
 
 ## Phase 3 — Validation, Simulation, Eval, and Cost Workflows
 
-**Status:** Code-complete. See [phase-3-full-implementation-checklist.md](phase-3-full-implementation-checklist.md) for evidence.
+Phase 3 status: 🟢 Code-complete (Tasks 3.1–3.5 have full implementations, scripts, tests, workflows, and runtime contracts; operational evidence from real CI runs is required before promotion to ✅ Complete). See [phase-3-full-implementation-checklist.md](phase-3-full-implementation-checklist.md) for evidence.
 
 ### Task 3.1 — Core CI Workflow Set Implementation
+
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-C (Validation/policy/eval/cost)
 
@@ -433,9 +435,30 @@ Status: 🟢 Code-complete.
 - Each emits deterministic artifacts + markdown summaries.
 - Required checks are wired to merge gates.
 
+**Evidence References:**
+
+- `.github/workflows/github-mode-build.yml`
+- `.github/workflows/github-mode-check.yml`
+- `.github/workflows/github-mode-test.yml`
+- `.github/workflows/github-mode-policy.yml`
+- `.github/workflows/github-mode-route-sim.yml`
+- `.github/workflows/github-mode-eval-tier0.yml`
+- `.github/workflows/github-mode-cost.yml`
+- `.github/workflows/github-mode-sync-templates.yml`
+
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-3.1-ci-workflow-set-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, workflow name, trigger type, artifact output summary, and required-check gate result.
+
 ---
 
 ### Task 3.2 — Untrusted-Safe Fork Execution Paths
+
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-B
 
@@ -449,9 +472,26 @@ Status: 🟢 Code-complete.
 
 **Security Check:** Must preserve “no privileged workflow execution from untrusted contexts.”
 
+**Evidence References:**
+
+- All Phase 3 workflows use `permissions: contents: read` at both workflow and job level.
+- No secrets are accessed in any Phase 3 workflow job.
+- `.GITHUB-MODE/scripts/github-mode-security-lint.ts` (validates permissions and secret access)
+- `.GITHUB-MODE/test/github-mode-security-lint.test.ts` (8 test cases including fork-safety scenarios)
+
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real fork PR execution using:
+  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-3.2-fork-safety-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, fork PR reference, secret-access audit result, and permission-level confirmation.
+
 ---
 
 ### Task 3.3 — Policy/Route Drift Detection
+
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-C
 
@@ -463,9 +503,27 @@ Status: 🟢 Code-complete.
 - Drift failures block promotion-related workflows.
 - Output includes remediation pointers.
 
+**Evidence References:**
+
+- `.GITHUB-MODE/scripts/check-policy-drift.ts`
+- `.GITHUB-MODE/test/check-policy-drift.test.ts` (6 test cases)
+- `.github/workflows/github-mode-policy.yml`
+- `.github/workflows/github-mode-route-sim.yml`
+- `.github/workflows/github-mode-check.yml` (includes policy drift check step)
+
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-3.3-policy-drift-detection-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, drift detection outcome, remediation pointer presence, and workflow blocking result.
+
 ---
 
 ### Task 3.4 — Eval/Cost Threshold Gates
+
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-C
 
@@ -477,9 +535,31 @@ Status: 🟢 Code-complete.
 - Failing thresholds block promotion.
 - Gate results are attached to run artifacts.
 
+**Evidence References:**
+
+- `.GITHUB-MODE/scripts/check-eval-thresholds.ts`
+- `.GITHUB-MODE/scripts/check-cost-thresholds.ts`
+- `.GITHUB-MODE/test/check-eval-thresholds.test.ts` (10 test cases)
+- `.GITHUB-MODE/test/check-cost-thresholds.test.ts` (9 test cases)
+- `.GITHUB-MODE/runtime/eval-thresholds.json`
+- `.GITHUB-MODE/runtime/cost-thresholds.json`
+- `.github/workflows/github-mode-eval-tier0.yml`
+- `.github/workflows/github-mode-cost.yml`
+- `.github/workflows/github-mode-check.yml` (includes eval and cost threshold check steps)
+
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-3.4-eval-cost-thresholds-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, eval threshold outcome, cost threshold outcome, and artifact attachment confirmation.
+
 ---
 
 ### Task 3.5 — Template Drift + Migration Guidance
+
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-F (Multi-entity template/collaboration)
 
@@ -491,9 +571,26 @@ Status: 🟢 Code-complete.
 - Guidance is generated consistently in PR/run summary.
 - Required checks remain green only when drift is acknowledged/resolved.
 
+**Evidence References:**
+
+- `.GITHUB-MODE/scripts/check-template-drift.ts`
+- `.GITHUB-MODE/test/check-template-drift.test.ts` (8 test cases)
+- `.GITHUB-MODE/runtime/template-baseline.json`
+- `.github/workflows/github-mode-sync-templates.yml`
+
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-3.5-template-drift-detection-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, template drift detection outcome, migration guidance presence, and required-check result.
+
 ---
 
 ## Phase 4 — Command Runtime and Bot PR Loop
+
+Phase 4 readiness: Phase 2 (✅ code-complete) + Phase 3 (✅ code-complete). Both dependency gates are satisfied — security foundation (Phase 2) and validation infrastructure (Phase 3) are implemented with scripts, tests, workflows, and runtime contracts. Phase 4 implementation can begin.
 
 ### Task 4.1 — Command Workflow Implementation
 
