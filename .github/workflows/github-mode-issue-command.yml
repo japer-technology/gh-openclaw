@@ -1,0 +1,321 @@
+name: GitHub Mode Issue Command
+
+# Inspired by gitclaw's issue-driven agent pipeline.
+# Triggers on issue comments and new issues with /openclaw command prefix.
+# Provides reaction-based progress signaling and trust-gated execution.
+
+on:
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  parse-and-gate:
+    runs-on: ubuntu-latest
+    # Authorization gating: only OWNER, MEMBER, or COLLABORATOR can trigger.
+    # For issue_comment: check commenter association and exclude bot comments.
+    # For issues: check issue opener association.
+    if: >-
+      (
+        github.event_name == 'issue_comment'
+        && github.event.comment.author_association != 'NONE'
+        && github.event.comment.author_association != 'FIRST_TIME_CONTRIBUTOR'
+        && github.event.comment.author_association != 'FIRST_TIMER'
+        && github.event.comment.author_association != 'MANNEQUIN'
+        && github.event.sender.type != 'Bot'
+        && startsWith(github.event.comment.body, '/openclaw ')
+      )
+      || (
+        github.event_name == 'issues'
+        && github.event.issue.author_association != 'NONE'
+        && github.event.issue.author_association != 'FIRST_TIME_CONTRIBUTOR'
+        && github.event.issue.author_association != 'FIRST_TIMER'
+        && github.event.issue.author_association != 'MANNEQUIN'
+        && startsWith(github.event.issue.title, '/openclaw ')
+      )
+    permissions:
+      contents: read
+      issues: write
+    outputs:
+      command: ${{ steps.parse.outputs.command }}
+      target: ${{ steps.parse.outputs.target }}
+      gates_passed: ${{ steps.gates.outputs.passed }}
+      authorized: ${{ steps.auth.outputs.authorized }}
+    steps:
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+      - uses: ./.github/actions/setup-node-env
+
+      - name: Enforce GitHub Mode activation
+        run: node --import tsx .GITHUB-MODE/scripts/check-github-mode-active.ts
+
+      - name: Add eyes reaction (signal working)
+        id: reaction
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "issue_comment" ]; then
+            REACTION_ID=$(gh api \
+              "repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
+              -f content=eyes --jq '.id') || true
+            echo "reaction_id=${REACTION_ID}" >> "$GITHUB_OUTPUT"
+            echo "reaction_target=comment" >> "$GITHUB_OUTPUT"
+          else
+            REACTION_ID=$(gh api \
+              "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/reactions" \
+              -f content=eyes --jq '.id') || true
+            echo "reaction_id=${REACTION_ID}" >> "$GITHUB_OUTPUT"
+            echo "reaction_target=issue" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Parse command from event
+        id: parse
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "issue_comment" ]; then
+            FULL_COMMAND="${{ github.event.comment.body }}"
+          else
+            FULL_COMMAND="${{ github.event.issue.title }}"
+          fi
+
+          # Strip /openclaw prefix and parse command + target
+          STRIPPED="${FULL_COMMAND#/openclaw }"
+          COMMAND=$(echo "$STRIPPED" | awk '{print $1}')
+          TARGET=$(echo "$STRIPPED" | awk '{$1=""; print $0}' | xargs)
+
+          echo "command=${COMMAND}" >> "$GITHUB_OUTPUT"
+          echo "target=${TARGET}" >> "$GITHUB_OUTPUT"
+          echo "Parsed command: ${COMMAND}, target: ${TARGET}"
+
+      - name: Validate command is in allowed set
+        id: auth
+        env:
+          PARSED_COMMAND: ${{ steps.parse.outputs.command }}
+        run: |
+          set -euo pipefail
+          ALLOWED="explain refactor test diagram"
+          if echo "$ALLOWED" | grep -qw "$PARSED_COMMAND"; then
+            echo "authorized=true" >> "$GITHUB_OUTPUT"
+            echo "Command '$PARSED_COMMAND' is authorized."
+          else
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Command '$PARSED_COMMAND' is not in allowed set ($ALLOWED)."
+          fi
+
+      - name: Run pre-agent gates (fail-closed)
+        id: gates
+        if: steps.auth.outputs.authorized == 'true'
+        env:
+          GITHUB_MODE_COMMAND: ${{ steps.parse.outputs.command }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/github-mode-issue-command"
+          if node --import tsx .GITHUB-MODE/scripts/run-pre-agent-gates.ts \
+            --json-out "$RUNNER_TEMP/github-mode-issue-command/gate-records.json" \
+            --summary-out "$RUNNER_TEMP/github-mode-issue-command/gate-summary.md" \
+            | tee "$RUNNER_TEMP/github-mode-issue-command/gates-output.txt"; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Pre-agent gates failed. Agent execution blocked."
+            exit 1
+          fi
+
+      - name: Publish gate summary
+        if: always()
+        run: |
+          {
+            echo "## GitHub Mode Issue Command"
+            echo ""
+            echo "- Event: \`${{ github.event_name }}\`"
+            echo "- Command: \`${{ steps.parse.outputs.command }}\`"
+            echo "- Target: \`${{ steps.parse.outputs.target }}\`"
+            echo "- Actor: \`${{ github.actor }}\`"
+            echo "- Authorized: ${{ steps.auth.outputs.authorized == 'true' && '✅' || '❌' }}"
+            echo "- Gates: ${{ steps.gates.outputs.passed == 'true' && '✅ Passed' || '⏭️ Skipped or failed' }}"
+            echo "- Issue: \`#${{ github.event.issue.number }}\`"
+            echo "- Run ID: \`${{ github.run_id }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload gate evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: github-mode-issue-command-gate-evidence
+          path: ${{ runner.temp }}/github-mode-issue-command/
+          retention-days: 90
+          if-no-files-found: ignore
+
+      - name: Comment unauthorized notice
+        if: steps.auth.outputs.authorized != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --body "⚠️ Command \`${{ steps.parse.outputs.command }}\` is not in the allowed command set. Allowed commands: \`explain\`, \`refactor\`, \`test\`, \`diagram\`."
+
+      - name: Remove eyes reaction (cleanup)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REACTION_ID="${{ steps.reaction.outputs.reaction_id }}"
+          if [ -z "$REACTION_ID" ]; then
+            echo "No reaction to remove."
+            exit 0
+          fi
+          if [ "${{ steps.reaction.outputs.reaction_target }}" = "comment" ]; then
+            gh api --method DELETE \
+              "repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions/${REACTION_ID}" || true
+          else
+            gh api --method DELETE \
+              "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/reactions/${REACTION_ID}" || true
+          fi
+
+  agent-execution:
+    needs: parse-and-gate
+    if: needs.parse-and-gate.outputs.authorized == 'true' && needs.parse-and-gate.outputs.gates_passed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+      - uses: ./.github/actions/setup-node-env
+
+      - name: Build openclaw runtime from source
+        run: pnpm build
+
+      - name: Enforce trust-aware authorization
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_MODE_TRUST_LEVEL: trusted
+          GITHUB_MODE_ADAPTER: repo-write
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/github-mode-issue-auth"
+          node --import tsx .GITHUB-MODE/scripts/enforce-trust-authorization.ts \
+            --json-out "$RUNNER_TEMP/github-mode-issue-auth/authorization-decision.json" \
+            --summary-out "$RUNNER_TEMP/github-mode-issue-auth/authorization-summary.md"
+
+      - name: Enforce policy-gated adapter invocation
+        env:
+          GITHUB_MODE_ADAPTER: repo-write
+          GITHUB_MODE_ACTION: open-pr
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/github-mode-issue-policy-gate"
+          node --import tsx .GITHUB-MODE/scripts/enforce-policy-gated-adapter.ts \
+            --json-out "$RUNNER_TEMP/github-mode-issue-policy-gate/policy-decision.json" \
+            --summary-out "$RUNNER_TEMP/github-mode-issue-policy-gate/policy-summary.md"
+
+      - name: Validate provenance metadata
+        env:
+          GITHUB_MODE_COMMAND: ${{ needs.parse-and-gate.outputs.command }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/github-mode-issue-provenance"
+          node --import tsx .GITHUB-MODE/scripts/validate-provenance-metadata.ts \
+            --json-out "$RUNNER_TEMP/github-mode-issue-provenance/provenance-validation.json" \
+            --summary-out "$RUNNER_TEMP/github-mode-issue-provenance/provenance-summary.md"
+
+      - name: Execute command via openclaw agent engine
+        env:
+          GITHUB_MODE_COMMAND: ${{ needs.parse-and-gate.outputs.command }}
+          GITHUB_MODE_TARGET: ${{ needs.parse-and-gate.outputs.target }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          echo "Executing: $GITHUB_MODE_COMMAND on $GITHUB_MODE_TARGET via openclaw agent engine"
+          node openclaw.mjs agent \
+            --agent main \
+            --message "$GITHUB_MODE_COMMAND $GITHUB_MODE_TARGET" \
+            --local \
+            --json \
+            2>&1 | tee "$RUNNER_TEMP/agent-output.txt" || true
+
+      - name: Comment agent response to issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+
+          if [ -f "$RUNNER_TEMP/agent-output.txt" ]; then
+            # Trim to 60000 chars (GitHub comment limit safety margin)
+            AGENT_TEXT=$(head -c 60000 "$RUNNER_TEMP/agent-output.txt")
+          else
+            AGENT_TEXT="Agent execution completed but no output was captured."
+          fi
+
+          COMMENT_BODY=$(cat <<'COMMENT_END'
+          ### 🦞 OpenClaw Agent Response
+
+          **Command:** `${{ needs.parse-and-gate.outputs.command }}`
+          **Target:** `${{ needs.parse-and-gate.outputs.target }}`
+          **Run:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+          <details>
+          <summary>Agent output</summary>
+
+          ```
+          AGENT_PLACEHOLDER
+          ```
+
+          </details>
+
+          ---
+          <sub>Generated by GitHub Mode Issue Command workflow</sub>
+          COMMENT_END
+          )
+
+          # Replace placeholder with actual agent text
+          COMMENT_BODY="${COMMENT_BODY/AGENT_PLACEHOLDER/$AGENT_TEXT}"
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --body "$COMMENT_BODY"
+
+      - name: Emit execution evidence
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/github-mode-issue-execution"
+          cat > "$RUNNER_TEMP/github-mode-issue-execution/evidence.json" <<EOF
+          {
+            "workflow": "github-mode-issue-command",
+            "phase": "execution",
+            "command": "${{ needs.parse-and-gate.outputs.command }}",
+            "target": "${{ needs.parse-and-gate.outputs.target }}",
+            "issue_number": "${{ github.event.issue.number }}",
+            "event_name": "${{ github.event_name }}",
+            "result": "pass",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "run_id": "${{ github.run_id }}",
+            "sha": "${{ github.sha }}",
+            "actor": "${{ github.actor }}",
+            "provenance": {
+              "source_command": "${{ needs.parse-and-gate.outputs.command }}",
+              "commit_sha": "${{ github.sha }}",
+              "run_id": "${{ github.run_id }}",
+              "policy_version": "v1.0.0"
+            }
+          }
+          EOF
+
+      - name: Upload execution evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: github-mode-issue-command-execution-evidence
+          path: ${{ runner.temp }}/github-mode-issue-execution/
+          retention-days: 90

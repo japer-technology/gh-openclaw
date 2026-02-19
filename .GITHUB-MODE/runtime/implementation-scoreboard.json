@@ -187,6 +187,17 @@
       ]
     },
     {
+      "id": "issue-driven-command-pipeline",
+      "description": "Issue-comment-driven agent command pipeline with reaction signaling, authorization gating, and comment-back response. Inspired by gitclaw patterns.",
+      "state": "operational",
+      "evidence": [
+        ".github/workflows/github-mode-issue-command.yml",
+        ".GITHUB-MODE/scripts/signal-reaction.ts",
+        ".GITHUB-MODE/test/signal-reaction.test.ts",
+        ".GITHUB-MODE/docs/design/issue-driven-agent-pipeline.md"
+      ]
+    },
+    {
       "id": "parity-snapshot-visibility",
       "description": "Parity matrix artifacts are generated and visible to reviewers in CI summaries.",
       "state": "scaffold",
