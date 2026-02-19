@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildParityReport,
   enforceSpecToImplementationTracking,
   getAddedSpecArtifacts,
   getScoreCounts,
   hasScoreboardUpdate,
   isSpecArtifact,
+  parseCliOptions,
   parseDiffEntries,
+  renderParityReportMarkdown,
   renderSummaryMarkdown,
   validateScoreboard,
   type DiffEntry,
@@ -113,5 +116,40 @@ describe("scoreboard validation and summary", () => {
     const summary = renderSummaryMarkdown(validScoreboard);
     expect(summary).toContain("Operational: **1**");
     expect(summary).toContain("Implementation ratio (operational/total): **1/3**");
+  });
+
+  it("builds deterministic parity report data", () => {
+    const report = buildParityReport({
+      version: 2,
+      capabilities: [
+        { id: "z", description: "Last", state: "scaffold" },
+        { id: "a", description: "First", state: "operational" },
+      ],
+    });
+
+    expect(report.generatedAt).toBe("1970-01-01T00:00:00.000Z");
+    expect(report.capabilities.map((capability) => capability.id)).toEqual(["a", "z"]);
+  });
+
+  it("renders parity report markdown", () => {
+    const report = renderParityReportMarkdown(validScoreboard);
+    expect(report).toContain("# GitHub Mode Parity Report");
+    expect(report).toContain("| a | operational | A |");
+  });
+});
+
+describe("cli options", () => {
+  it("parses report file and format arguments", () => {
+    expect(
+      parseCliOptions(["--report-file", "tmp/parity-report.json", "--report-format", "json"]),
+    ).toEqual({
+      summary: false,
+      reportFile: "tmp/parity-report.json",
+      reportFormat: "json",
+    });
+  });
+
+  it("rejects invalid report format", () => {
+    expect(() => parseCliOptions(["--report-format", "yaml"])).toThrowError(/--report-format/);
   });
 });

@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import process from "node:process";
 
 const SCOREBOARD_PATH = ".GITHUB-MODE/runtime/implementation-scoreboard.json";
@@ -22,6 +23,14 @@ export type Scoreboard = {
 export type DiffEntry = {
   status: string;
   path: string;
+};
+
+type ReportFormat = "json" | "markdown";
+
+type CliOptions = {
+  summary: boolean;
+  reportFile?: string;
+  reportFormat: ReportFormat;
 };
 
 export function parseDiffEntries(diffOutput: string): DiffEntry[] {
@@ -160,6 +169,101 @@ export function renderSummaryMarkdown(scoreboard: Scoreboard): string {
   ].join("\n");
 }
 
+export function buildParityReport(scoreboard: Scoreboard): {
+  generatedAt: string;
+  scoreboardVersion: number;
+  summary: string;
+  counts: Record<ScoreState, number>;
+  totalCapabilities: number;
+  capabilities: Capability[];
+} {
+  const counts = getScoreCounts(scoreboard);
+
+  return {
+    generatedAt: "1970-01-01T00:00:00.000Z",
+    scoreboardVersion: scoreboard.version,
+    summary: renderSummaryMarkdown(scoreboard),
+    counts,
+    totalCapabilities: scoreboard.capabilities.length,
+    capabilities: [...scoreboard.capabilities].toSorted((a, b) => a.id.localeCompare(b.id)),
+  };
+}
+
+export function renderParityReportMarkdown(scoreboard: Scoreboard): string {
+  const report = buildParityReport(scoreboard);
+  const header = [
+    "# GitHub Mode Parity Report",
+    "",
+    `Generated at: ${report.generatedAt}`,
+    `Scoreboard version: ${report.scoreboardVersion}`,
+    "",
+    "## Summary",
+    report.summary,
+    "",
+    "## Capabilities",
+    "| ID | State | Description |",
+    "| --- | --- | --- |",
+  ];
+
+  const capabilities = report.capabilities.map(
+    (capability) => `| ${capability.id} | ${capability.state} | ${capability.description} |`,
+  );
+
+  return [...header, ...capabilities].join("\n");
+}
+
+export function writeParityReport(
+  scoreboard: Scoreboard,
+  outputPath: string,
+  format: ReportFormat,
+): void {
+  const reportContent =
+    format === "json"
+      ? `${JSON.stringify(buildParityReport(scoreboard), null, 2)}\n`
+      : `${renderParityReportMarkdown(scoreboard)}\n`;
+
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, reportContent, "utf8");
+}
+
+export function parseCliOptions(args: string[]): CliOptions {
+  const options: CliOptions = {
+    summary: false,
+    reportFormat: "markdown",
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+
+    if (arg === "--summary") {
+      options.summary = true;
+      continue;
+    }
+
+    if (arg === "--report-file") {
+      const value = args[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error("--report-file requires a file path argument.");
+      }
+      options.reportFile = value;
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--report-format") {
+      const value = args[index + 1];
+      if (value !== "json" && value !== "markdown") {
+        throw new Error("--report-format must be either 'json' or 'markdown'.");
+      }
+      options.reportFormat = value;
+      index += 1;
+      continue;
+    }
+  }
+
+  return options;
+}
+
 export function enforceSpecToImplementationTracking(entries: DiffEntry[]): void {
   const addedSpecs = getAddedSpecArtifacts(entries);
   if (addedSpecs.length === 0) {
@@ -179,11 +283,17 @@ export function enforceSpecToImplementationTracking(entries: DiffEntry[]): void 
 }
 
 function main(): void {
+  const options = parseCliOptions(process.argv.slice(2));
   const entries = getDiffEntries();
   const scoreboard = loadScoreboard();
   validateScoreboard(scoreboard);
 
-  if (process.argv.includes("--summary")) {
+  if (options.reportFile) {
+    writeParityReport(scoreboard, options.reportFile, options.reportFormat);
+    console.log(`📄 Wrote parity report to ${options.reportFile}`);
+  }
+
+  if (options.summary) {
     console.log(renderSummaryMarkdown(scoreboard));
     return;
   }
