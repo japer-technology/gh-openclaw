@@ -177,7 +177,7 @@ Status: ✅ Complete.
 
 - ✅ Validator fails when installed-only entries lack owner/rationale.
 - Validator fails when high-value workflows are unmapped.
-- Parity report artifact is generated per PR affecting relevant subsystems.
+- Parity report artifact (`github-mode-parity-report`) is generated in `.github/workflows/github-mode-contracts.yml` (`validate-contracts` job, `Generate parity report artifact` + `Upload parity report artifact` steps) for PRs affecting relevant subsystems.
 
 ---
 

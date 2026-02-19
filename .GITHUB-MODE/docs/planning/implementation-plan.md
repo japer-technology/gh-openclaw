@@ -219,7 +219,7 @@ Phase 1 proceeds only while this evidence remains valid.
 **Exit criteria satisfied:**
 
 - Contract validation is mandatory in CI.
-- Parity report artifact generated per PR for changed subsystems.
+- Parity report artifact (`github-mode-parity-report`) generated per PR for changed subsystems via `.github/workflows/github-mode-contracts.yml` (`validate-contracts` artifact upload step).
 
 ---
 
