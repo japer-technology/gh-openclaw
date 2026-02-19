@@ -1,6 +1,6 @@
 # 🦞 GitHub Mode: Advertising
 
-### This directory contains advertising analysis.
+### This directory contains advertising information and analysis.
 
 <p align="center">
   <picture>
