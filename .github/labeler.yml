@@ -252,3 +252,8 @@
   - changed-files:
       - any-glob-to-any-file:
           - "extensions/talk-voice/**"
+"github-mode":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".GITHUB-MODE/**"
+          - ".github/workflows/github-mode-*.yml"

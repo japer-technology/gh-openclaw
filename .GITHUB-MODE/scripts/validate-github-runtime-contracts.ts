@@ -46,6 +46,7 @@ const requiredContracts: ContractCheck[] = [
       "schemaVersion",
       "convergenceVersion",
       "acceptanceCriteria",
+      "requiredHighValueWorkflows",
       "reconciliationSignals",
     ],
   },
@@ -79,6 +80,18 @@ const requiredContracts: ContractCheck[] = [
   {
     file: ".GITHUB-MODE/runtime/skills-emergency-revocations.json",
     requiredKeys: ["schemaVersion", "revocationVersion", "events"],
+  },
+  {
+    file: ".GITHUB-MODE/runtime/eval-thresholds.json",
+    requiredKeys: ["schemaVersion", "thresholdsVersion", "enforcementMode", "tiers", "subsystems"],
+  },
+  {
+    file: ".GITHUB-MODE/runtime/cost-thresholds.json",
+    requiredKeys: ["schemaVersion", "thresholdsVersion", "enforcementMode", "gates"],
+  },
+  {
+    file: ".GITHUB-MODE/runtime/template-baseline.json",
+    requiredKeys: ["schemaVersion", "baselineVersion", "requiredFiles"],
   },
 ];
 
@@ -226,6 +239,70 @@ function validateConvergenceMap(): void {
   if (!hasRequiredSignal) {
     throw new Error(
       `${convergencePath}: must include at least one reconciliation signal with required=true`,
+    );
+  }
+}
+
+function validateRequiredHighValueWorkflowCoverage(): void {
+  const convergencePath = ".GITHUB-MODE/runtime/workspace-convergence-map.json";
+  const parityPath = ".GITHUB-MODE/runtime/parity-matrix.json";
+  const convergence = readJson(convergencePath);
+  const parity = readJson(parityPath);
+
+  const requiredWorkflows = convergence.requiredHighValueWorkflows;
+  if (!Array.isArray(requiredWorkflows) || requiredWorkflows.length === 0) {
+    throw new Error(`${convergencePath}: requiredHighValueWorkflows must be a non-empty array`);
+  }
+
+  const invalidRequired = requiredWorkflows.filter((workflow) => typeof workflow !== "string");
+  if (invalidRequired.length > 0) {
+    throw new Error(
+      `${convergencePath}: requiredHighValueWorkflows must contain only workflow ID strings`,
+    );
+  }
+
+  const duplicates = new Set<string>();
+  const seen = new Set<string>();
+  for (const workflow of requiredWorkflows as string[]) {
+    if (seen.has(workflow)) {
+      duplicates.add(workflow);
+    }
+    seen.add(workflow);
+  }
+
+  if (duplicates.size > 0) {
+    throw new Error(
+      `${convergencePath}: requiredHighValueWorkflows contains duplicates: ${Array.from(duplicates)
+        .toSorted()
+        .join(", ")}`,
+    );
+  }
+
+  const mappings = parity.mappings;
+  if (!Array.isArray(mappings)) {
+    throw new Error(`${parityPath}: mappings must be an array`);
+  }
+
+  const parityWorkflowIds = new Set<string>();
+  for (const [index, mapping] of mappings.entries()) {
+    if (!mapping || typeof mapping !== "object") {
+      throw new Error(`${parityPath}: mappings[${index}] must be an object`);
+    }
+
+    const workflow = (mapping as JsonObject).workflow;
+    if (typeof workflow !== "string" || workflow.length === 0) {
+      throw new Error(`${parityPath}: mappings[${index}].workflow must be a non-empty string`);
+    }
+
+    parityWorkflowIds.add(workflow);
+  }
+
+  const missing = (requiredWorkflows as string[]).filter(
+    (workflow) => !parityWorkflowIds.has(workflow),
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `${parityPath}: missing required high-value workflow mappings for: ${missing.toSorted().join(", ")}`,
     );
   }
 }
@@ -386,6 +463,46 @@ function validateEmergencyRevocations(): void {
   }
 }
 
+function validateAdapterContractsSchema(): void {
+  const schemaPath = ".GITHUB-MODE/runtime/adapter-contracts.schema.json";
+  const instancePath = ".GITHUB-MODE/runtime/adapter-contracts.json";
+  const schema = readJson(schemaPath);
+  const instance = readJson(instancePath);
+
+  const ajv = new Ajv({ allErrors: true, strict: true });
+  const validate = ajv.compile(schema);
+  const valid = validate(instance);
+  if (!valid) {
+    const errors = validate.errors
+      ?.map((error) => `${error.instancePath || "/"} ${error.message}`)
+      .join("; ");
+    throw new Error(`${instancePath}: schema validation failed (${errors ?? "unknown error"})`);
+  }
+}
+
+function validateProvenanceMetadataSchema(): void {
+  const schemaPath = ".GITHUB-MODE/runtime/provenance-metadata.schema.json";
+  const schema = readJson(schemaPath);
+
+  const ajv = new Ajv({ allErrors: true, strict: false, logger: false });
+  const validate = ajv.compile(schema);
+  if (!validate) {
+    throw new Error(`${schemaPath}: schema compilation failed`);
+  }
+
+  const requiredFields = schema.required;
+  if (!Array.isArray(requiredFields) || requiredFields.length === 0) {
+    throw new Error(`${schemaPath}: must declare at least one required field`);
+  }
+
+  const expectedFields = ["source_command", "commit_sha", "run_id", "policy_version"];
+  for (const field of expectedFields) {
+    if (!requiredFields.includes(field)) {
+      throw new Error(`${schemaPath}: missing required provenance field "${field}"`);
+    }
+  }
+}
+
 function validateTaskReadinessMarker(): void {
   const tasksPath = ".GITHUB-MODE/docs/planning/implementation-tasks.md";
   const tasksDoc = readFileSync(path.join(ROOT, tasksPath), "utf8");
@@ -404,15 +521,18 @@ function main(): void {
 
   validateManifestSchema();
   validateEntityManifestSchema();
+  validateAdapterContractsSchema();
   validateCollaborationPolicySchema();
   validateCollaborationEnvelopeSchema();
   validateCollaborationPolicyDenyDefault();
   validateParityMatrix();
   validateConvergenceMap();
+  validateRequiredHighValueWorkflowCoverage();
   validateSkillsQuarantineRegistry();
   validateTrustedAllowlist();
   validateTrustedCommandGate();
   validateEmergencyRevocations();
+  validateProvenanceMetadataSchema();
   validateTaskReadinessMarker();
 
   console.log("GitHub runtime contracts: validation passed.");

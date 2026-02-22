@@ -187,27 +187,42 @@ When a run reaches `completed` or `failed`, handoff must be explicit:
 
 ## 4) Architecture
 
-### 4.1 Shared runtime spine
+### 4.1 Fork-context runtime execution
 
-GitHub mode shares semantics through stable contracts, not direct imports from installed-runtime internals.
+GitHub Mode runs inside a fork that contains the full OpenClaw source tree. The fork already has all of `src/` — agents, auto-reply, routing, tool policy, providers, memory, security, config, plugins, and infrastructure. GitHub Mode workflows build and run this runtime directly.
 
-- Extract policy-neutral helpers into shared libraries with no runtime side effects.
-- Keep installed runtime behavior behind adapter boundaries that expose explicit interfaces.
-- Validate parity against contract artifacts in `.GITHUB-MODE/runtime/**`.
+**Build-from-source execution model:**
 
-### 4.1.1 Reuse without direct import
+1. Workflows run `pnpm install && pnpm build` to produce the full openclaw runtime.
+2. Agent execution uses `src/agents/pi-embedded-runner` and `src/auto-reply/reply` — the same orchestration that powers the installed runtime.
+3. Routing uses `src/routing/` — the same agent route resolution logic.
+4. Tool policy uses `src/agents/tool-policy.ts` and `src/agents/tools/` — the same policy gates.
+5. Provider calls use `src/providers/` — the same model integrations (Anthropic, OpenAI, etc.).
+6. Memory uses `src/memory/` — the same conversation context system.
+7. Config uses `src/config/` — the same configuration loading and validation.
 
-Allowed reuse in GitHub mode must stay detached from installed runtime internals:
+This means GitHub Mode is not a separate reimplementation or a governance-only overlay — it runs the actual OpenClaw "magic" inside GitHub Actions. The governance layer (contracts, security lint, policy validation) adds safety and auditability on top.
 
-- contract artifacts and schemas in `.GITHUB-MODE/runtime/**`
-- side-effect-free shared utility packages extracted for cross-plane use (for example: parsing, normalization, diff planning helpers)
-- validators and codec libraries that depend only on interface schemas and test fixtures
+**What the governance layer provides (contract-driven, no src imports):**
 
-Not allowed:
+- Contract artifacts and schemas in `.GITHUB-MODE/runtime/**`
+- Security lint, drift detection, and policy validation scripts
+- Pre-agent security gates (skill scan, lockfile/provenance, policy evaluation)
+- Trust-level enforcement and adapter authorization
+- Provenance metadata embedding and verification
 
-- importing `src/**` runtime implementations into `.GITHUB-MODE/**`, workflows, or actions
-- sharing modules that trigger runtime side effects at import time (network/process/provider auth)
-- coupling GitHub orchestration to installed runtime file paths instead of adapter interfaces
+**What the execution layer provides (fork-context src usage):**
+
+- Agent execution engine (`src/agents/`) for AI reasoning and task completion
+- Auto-reply orchestration (`src/auto-reply/`) for model interaction and conversation flow
+- Routing logic (`src/routing/`) for agent selection and message handling
+- Tool invocation (`src/agents/tools/`) for code editing, file operations, web search, etc.
+- Provider integrations (`src/providers/`) for model API calls
+- Memory and sessions (`src/memory/`, `src/sessions/`) for conversation context
+- Plugin system (`src/plugins/`, `src/plugin-sdk/`) for extensibility
+- Security checks (`src/security/`) for runtime audit and tool policy
+
+**Boundary rule:** `.GITHUB-MODE` PRs must not modify `src/**` files. Source changes are upstream-owned and sync separately. See [ADR 0001 fork-context amendment](adr/0001-runtime-boundary-and-ownership.md).
 
 ### 4.2 GitHub overlay components
 
@@ -221,9 +236,13 @@ Not allowed:
 
 ### Runtime
 
-- same orchestration/agent loop
+- openclaw built from source (`pnpm install && pnpm build`)
+- same agent orchestration loop (`src/agents/pi-embedded-runner`, `src/auto-reply/reply`)
+- same routing and agent selection (`src/routing/`)
+- same tool policy and activation gates (`src/agents/tool-policy.ts`)
+- same model provider integrations (`src/providers/`)
 - trust-aware command parsing
-- policy-gated tool activation
+- policy-gated tool activation via pre-agent security gates
 
 ### Adapters
 

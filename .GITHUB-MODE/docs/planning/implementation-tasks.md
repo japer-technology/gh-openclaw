@@ -80,13 +80,23 @@ When defining or implementing tasks in Phases 1–7, include where durable state
 
 ---
 
-## Cross-cutting Runtime Constraint — Extension Architecture Boundary
+## Cross-cutting Runtime Constraint — Fork-Context Source Execution
 
-GitHub Mode TypeScript runtime code must follow the extension pattern by implementing code in `extensions/github/` rather than embedding code in `src/`. See `.GITHUB-MODE/docs/README.md` and ADR 0001 for the full boundary rationale.
+GitHub Mode runs inside a fork that contains the full OpenClaw source tree. Workflows may build and execute the openclaw runtime from `src/` to leverage the actual agent execution engine, routing, tool policy, providers, and memory systems. This is the primary mechanism for delivering the "run as if installed" experience in GitHub Actions.
 
-- GitHub Mode workflows/actions must not import installed runtime internals from `src/**`.
-- New GitHub Mode runtime behavior should mirror extension packaging and dependency isolation.
-- Violation of this boundary triggers the ADR 0001 backout process.
+**Permitted fork-context patterns:**
+
+- Workflow steps that run `pnpm install && pnpm build` and then invoke the built openclaw CLI or runtime modules for agent execution, command processing, and evaluations.
+- `.GITHUB-MODE/scripts/**` that import from `src/` for runtime behavior (agent execution, routing, policy evaluation) when running inside a fork-context workflow.
+- Workflow steps that import from the built `dist/` output for programmatic access to agents, providers, routing, etc.
+
+**Fork-context constraints (must hold):**
+
+- `.GITHUB-MODE` PRs must not modify `src/**` files — src changes are upstream-owned and sync separately (enforced by `check-upstream-additions-only`).
+- Fork-context execution must pass the same pre-agent security gates before agent execution.
+- Governance scripts (contract validation, security lint, drift detection) remain contract-driven and do not require `src/` imports.
+
+This replaces the previous "Extension Architecture Boundary" constraint that prohibited all `src/` usage. See [ADR 0001 fork-context amendment](../adr/0001-runtime-boundary-and-ownership.md) for the full rationale.
 
 ---
 
@@ -176,8 +186,8 @@ Status: ✅ Complete.
 **Acceptance Criteria:**
 
 - ✅ Validator fails when installed-only entries lack owner/rationale.
-- Validator fails when high-value workflows are unmapped.
-- Parity report artifact (`github-mode-parity-report`) is generated in `.github/workflows/github-mode-contracts.yml` (`validate-contracts` job, `Generate parity report artifact` + `Upload parity report artifact` steps) for PRs affecting relevant subsystems.
+- ✅ Validator fails when high-value workflows are unmapped.
+- ✅ Parity report artifact (`github-mode-parity-report`) is generated in `.github/workflows/github-mode-contracts.yml` (`validate-contracts` job, `Generate parity report artifact` + `Upload parity report artifact` steps) for PRs affecting relevant subsystems.
 
 ---
 
@@ -191,19 +201,19 @@ Status: ✅ Complete.
 
 **Acceptance Criteria:**
 
-- Incompatible schema change without migration notes fails.
-- Compatibility validator is updated as part of breaking changes.
+- ✅ Incompatible schema change without migration notes fails.
+- ✅ Compatibility validator is updated as part of breaking changes.
 - ✅ Process is documented in contributor workflow (see `.GITHUB-MODE/runtime/README.md` "Contract versioning and compatibility" section).
 
 ---
 
 ## Phase 2 — Security Foundation (GitHub-native)
 
-Phase 2 status: 🟡 Designed/Scaffolded (Tasks 2.1–2.6 have schema/workflow scaffolding; operational evidence is required before promotion to ✅ Complete).
+Phase 2 status: 🟢 Code-complete (Tasks 2.1–2.6 have full code implementations, scripts, tests, workflows, and runtime contracts; operational evidence from real CI runs is required before promotion to ✅ Complete).
 
 ### Task 2.1 — Secrets Inventory and Rotation Standard
 
-Status: 🟡 Designed/Scaffolded.
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-B
 
@@ -225,7 +235,7 @@ Status: 🟡 Designed/Scaffolded.
 **Operational evidence (required for ✅ Complete):**
 
 - Immutable workflow run URL captured for a real execution using the canonical pattern:
-  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+  `https://github.com/japer-technology/gh-openclaw/actions/runs/<run_id>`
 - Immutable artifact reference(s) linked in this section using the filename convention:
   `task-2.1-secrets-rotation-evidence-<env>-<YYYYMMDDTHHMMSSZ>.json`
 - Evidence file must include ISO8601 UTC timestamp, actor identity, reviewed environment scope, and rotation/revocation outcome.
@@ -234,7 +244,7 @@ Status: 🟡 Designed/Scaffolded.
 
 ### Task 2.2 — Environment Protection Configuration
 
-Status: 🟡 Designed/Scaffolded.
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-B
 
@@ -257,7 +267,7 @@ Status: 🟡 Designed/Scaffolded.
 **Operational evidence (required for ✅ Complete):**
 
 - Immutable workflow run URL captured for a real execution using:
-  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+  `https://github.com/japer-technology/gh-openclaw/actions/runs/<run_id>`
 - Immutable artifact reference(s) linked in this section using:
   `task-2.2-environment-protection-verify-<env>-<YYYYMMDDTHHMMSSZ>.json`
 - Evidence file must include timestamp, environment name, reviewer gate result, and branch/tag restriction enforcement result.
@@ -266,7 +276,7 @@ Status: 🟡 Designed/Scaffolded.
 
 ### Task 2.3 — Workflow Permission Hardening
 
-Status: 🟡 Designed/Scaffolded.
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-B
 
@@ -287,7 +297,7 @@ Status: 🟡 Designed/Scaffolded.
 **Operational evidence (required for ✅ Complete):**
 
 - Immutable workflow run URL captured for a real execution using:
-  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+  `https://github.com/japer-technology/gh-openclaw/actions/runs/<run_id>`
 - Immutable artifact reference(s) linked in this section using:
   `task-2.3-permissions-hardening-<env>-<YYYYMMDDTHHMMSSZ>.json`
 - Evidence file must include timestamp, workflow identifier, evaluated permission map, and untrusted-trigger secret access result.
@@ -296,7 +306,7 @@ Status: 🟡 Designed/Scaffolded.
 
 ### Task 2.4 — OIDC Adoption for Cloud Access
 
-Status: 🟡 Designed/Scaffolded.
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-B
 
@@ -321,7 +331,7 @@ Status: 🟡 Designed/Scaffolded.
 **Operational evidence (required for ✅ Complete):**
 
 - Immutable workflow run URL captured for a real execution using:
-  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+  `https://github.com/japer-technology/gh-openclaw/actions/runs/<run_id>`
 - Immutable artifact reference(s) linked in this section using:
   `task-2.4-oidc-deploy-proof-<env>-<YYYYMMDDTHHMMSSZ>.json`
 - Each evidence artifact must record and preserve:
@@ -335,7 +345,7 @@ Status: 🟡 Designed/Scaffolded.
 
 ### Task 2.5 — Security Lint and Simulation Harness
 
-Status: 🟡 Designed/Scaffolded.
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-B
 
@@ -358,7 +368,7 @@ Status: 🟡 Designed/Scaffolded.
 **Operational evidence (required for ✅ Complete):**
 
 - Immutable workflow run URL captured for a real execution using:
-  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+  `https://github.com/japer-technology/gh-openclaw/actions/runs/<run_id>`
 - Immutable artifact reference(s) linked in this section using:
   `task-2.5-security-lint-simulation-<env>-<YYYYMMDDTHHMMSSZ>.json`
 - Evidence file must include timestamp, unpinned-action detection outcome, permission-hardening outcome, and untrusted-secret simulation result.
@@ -367,7 +377,7 @@ Status: 🟡 Designed/Scaffolded.
 
 ### Task 2.6 — Skills Quarantine Pipeline
 
-Status: 🟡 Designed/Scaffolded.
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-B
 
@@ -405,7 +415,7 @@ Status: 🟡 Designed/Scaffolded.
 **Operational evidence (required for ✅ Complete):**
 
 - Immutable workflow run URL captured for a real execution using:
-  `https://github.com/openclaw/openclaw/actions/runs/<run_id>`
+  `https://github.com/japer-technology/gh-openclaw/actions/runs/<run_id>`
 - Immutable artifact reference(s) linked in this section using:
   `task-2.6-quarantine-e2e-<submission_id>-<YYYYMMDDTHHMMSSZ>.json`
 - Evidence set must include immutable records for each stage with shared correlation id:
@@ -419,7 +429,11 @@ Status: 🟡 Designed/Scaffolded.
 
 ## Phase 3 — Validation, Simulation, Eval, and Cost Workflows
 
+Phase 3 status: 🟢 Code-complete (Tasks 3.1–3.5 have full implementations, scripts, tests, workflows, and runtime contracts; operational evidence from real CI runs is required before promotion to ✅ Complete). See [phase-3-full-implementation-checklist.md](phase-3-full-implementation-checklist.md) for evidence.
+
 ### Task 3.1 — Core CI Workflow Set Implementation
+
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-C (Validation/policy/eval/cost)
 
@@ -431,9 +445,30 @@ Status: 🟡 Designed/Scaffolded.
 - Each emits deterministic artifacts + markdown summaries.
 - Required checks are wired to merge gates.
 
+**Evidence References:**
+
+- `.github/workflows/github-mode-build.yml`
+- `.github/workflows/github-mode-check.yml`
+- `.github/workflows/github-mode-test.yml`
+- `.github/workflows/github-mode-policy.yml`
+- `.github/workflows/github-mode-route-sim.yml`
+- `.github/workflows/github-mode-eval-tier0.yml`
+- `.github/workflows/github-mode-cost.yml`
+- `.github/workflows/github-mode-sync-templates.yml`
+
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/japer-technology/gh-openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-3.1-ci-workflow-set-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, workflow name, trigger type, artifact output summary, and required-check gate result.
+
 ---
 
 ### Task 3.2 — Untrusted-Safe Fork Execution Paths
+
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-B
 
@@ -447,9 +482,26 @@ Status: 🟡 Designed/Scaffolded.
 
 **Security Check:** Must preserve “no privileged workflow execution from untrusted contexts.”
 
+**Evidence References:**
+
+- All Phase 3 workflows use `permissions: contents: read` at both workflow and job level.
+- No secrets are accessed in any Phase 3 workflow job.
+- `.GITHUB-MODE/scripts/github-mode-security-lint.ts` (validates permissions and secret access)
+- `.GITHUB-MODE/test/github-mode-security-lint.test.ts` (8 test cases including fork-safety scenarios)
+
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real fork PR execution using:
+  `https://github.com/japer-technology/gh-openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-3.2-fork-safety-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, fork PR reference, secret-access audit result, and permission-level confirmation.
+
 ---
 
 ### Task 3.3 — Policy/Route Drift Detection
+
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-C
 
@@ -461,9 +513,27 @@ Status: 🟡 Designed/Scaffolded.
 - Drift failures block promotion-related workflows.
 - Output includes remediation pointers.
 
+**Evidence References:**
+
+- `.GITHUB-MODE/scripts/check-policy-drift.ts`
+- `.GITHUB-MODE/test/check-policy-drift.test.ts` (6 test cases)
+- `.github/workflows/github-mode-policy.yml`
+- `.github/workflows/github-mode-route-sim.yml`
+- `.github/workflows/github-mode-check.yml` (includes policy drift check step)
+
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/japer-technology/gh-openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-3.3-policy-drift-detection-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, drift detection outcome, remediation pointer presence, and workflow blocking result.
+
 ---
 
 ### Task 3.4 — Eval/Cost Threshold Gates
+
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-C
 
@@ -475,9 +545,31 @@ Status: 🟡 Designed/Scaffolded.
 - Failing thresholds block promotion.
 - Gate results are attached to run artifacts.
 
+**Evidence References:**
+
+- `.GITHUB-MODE/scripts/check-eval-thresholds.ts`
+- `.GITHUB-MODE/scripts/check-cost-thresholds.ts`
+- `.GITHUB-MODE/test/check-eval-thresholds.test.ts` (10 test cases)
+- `.GITHUB-MODE/test/check-cost-thresholds.test.ts` (9 test cases)
+- `.GITHUB-MODE/runtime/eval-thresholds.json`
+- `.GITHUB-MODE/runtime/cost-thresholds.json`
+- `.github/workflows/github-mode-eval-tier0.yml`
+- `.github/workflows/github-mode-cost.yml`
+- `.github/workflows/github-mode-check.yml` (includes eval and cost threshold check steps)
+
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/japer-technology/gh-openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-3.4-eval-cost-thresholds-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, eval threshold outcome, cost threshold outcome, and artifact attachment confirmation.
+
 ---
 
 ### Task 3.5 — Template Drift + Migration Guidance
+
+Status: 🟢 Code-complete.
 
 **Workstream:** WS-F (Multi-entity template/collaboration)
 
@@ -489,20 +581,59 @@ Status: 🟡 Designed/Scaffolded.
 - Guidance is generated consistently in PR/run summary.
 - Required checks remain green only when drift is acknowledged/resolved.
 
+**Evidence References:**
+
+- `.GITHUB-MODE/scripts/check-template-drift.ts`
+- `.GITHUB-MODE/test/check-template-drift.test.ts` (8 test cases)
+- `.GITHUB-MODE/runtime/template-baseline.json`
+- `.github/workflows/github-mode-sync-templates.yml`
+
+**Operational evidence (required for ✅ Complete):**
+
+- Immutable workflow run URL captured for a real execution using:
+  `https://github.com/japer-technology/gh-openclaw/actions/runs/<run_id>`
+- Immutable artifact reference(s) linked in this section using:
+  `task-3.5-template-drift-detection-<env>-<YYYYMMDDTHHMMSSZ>.json`
+- Evidence file must include timestamp, template drift detection outcome, migration guidance presence, and required-check result.
+
 ---
 
 ## Phase 4 — Command Runtime and Bot PR Loop
 
+Phase 4 readiness: Phase 2 (✅ code-complete) + Phase 3 (✅ code-complete). Both dependency gates are satisfied — security foundation (Phase 2) and validation infrastructure (Phase 3) are implemented with scripts, tests, workflows, and runtime contracts. Phase 4 implementation can begin.
+
+**Fork-context execution model:** Phase 4 workflows build the openclaw runtime from `src/` (`pnpm install && pnpm build`) and invoke it for agent execution, command processing, routing, tool policy enforcement, and provider calls. This is the primary mechanism for running openclaw's "magic" — the same agent engine, auto-reply orchestration, routing logic, and tool policy system that powers the installed runtime now powers GitHub Mode commands. See [ADR 0001 fork-context amendment](../adr/0001-runtime-boundary-and-ownership.md).
+
+**Key `src/` modules used by Phase 4:**
+
+| Module         | Source path                       | Purpose in GitHub Mode                                                       |
+| -------------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| Agent runner   | `src/agents/`                     | Core execution engine — runs agent tasks, manages tool invocation, sandbox   |
+| Auto-reply     | `src/auto-reply/`                 | Orchestration layer — reply generation, model interaction, conversation flow |
+| Routing        | `src/routing/`                    | Agent route resolution — determines which agent handles a given command      |
+| Tool policy    | `src/agents/tool-policy.ts`       | Policy gates for tool usage during agent execution                           |
+| Providers      | `src/providers/`                  | Model provider integrations (Anthropic, OpenAI, etc.) for inference          |
+| Security       | `src/security/`                   | Audit, tool policy validation, skill scanning                                |
+| Config         | `src/config/`                     | Configuration loading, validation, and merging                               |
+| Memory         | `src/memory/`                     | Conversation memory for agent context                                        |
+| Sessions       | `src/sessions/`                   | Session state management for agent conversations                             |
+| Plugins        | `src/plugins/`, `src/plugin-sdk/` | Plugin system and SDK for extensibility                                      |
+| Hooks          | `src/hooks/`                      | Internal event system for lifecycle events                                   |
+| Infrastructure | `src/infra/`                      | Environment handling, networking, process management                         |
+
 ### Task 4.1 — Command Workflow Implementation
+
+Status: ✅ Complete.
 
 **Workstream:** WS-D (Command runtime and bot PR loop)
 
-**Scope:** Implement `github-mode-command.yml`, `github-mode-agent-run.yml`, `github-mode-bot-pr.yml`.
+**Scope:** Implement `github-mode-command.yml`, `github-mode-agent-run.yml`, `github-mode-bot-pr.yml`. These workflows build the openclaw runtime from `src/` and use it for actual agent execution.
 
 **Acceptance Criteria:**
 
 - All three workflows execute in intended sequence.
-- Command baseline (explain, refactor, test, diagram) is supported.
+- Workflows include a build-from-source step (`pnpm install && pnpm build`) before agent execution.
+- Command baseline (explain, refactor, test, diagram) is executed via the actual openclaw agent engine (`src/agents/`).
 - `github-mode-command.yml` and `github-mode-agent-run.yml` run blocking pre-agent gates in this order: skill/package scan, lockfile/provenance checks, policy evaluation.
 - Gates are fail-closed: any gate failure or indeterminate decision stops workflow before agent execution.
 - Each gate emits a minimal pass/fail record in summary + artifact:
@@ -510,11 +641,21 @@ Status: 🟡 Designed/Scaffolded.
   - `result=<PASS|FAIL>`
   - `reason=<short machine-parseable reason>`
   - `evidence=<artifact-or-log-reference>`
-- End-to-end command-to-PR works for trusted users.
+- End-to-end command-to-PR works for trusted users using the built openclaw runtime.
+
+**Evidence References:**
+
+- `.github/workflows/github-mode-command.yml`
+- `.github/workflows/github-mode-agent-run.yml`
+- `.github/workflows/github-mode-bot-pr.yml`
+- `.GITHUB-MODE/scripts/run-pre-agent-gates.ts`
+- `.GITHUB-MODE/test/run-pre-agent-gates.test.ts`
 
 ---
 
 ### Task 4.2 — Trust-Aware Authorization Layer
+
+Status: ✅ Complete.
 
 **Workstream:** WS-D
 
@@ -528,9 +669,21 @@ Status: 🟡 Designed/Scaffolded.
 
 **Security Check:** Must enforce guardrail “no privileged execution from untrusted contexts.”
 
+**Evidence References:**
+
+- `.GITHUB-MODE/scripts/enforce-trust-authorization.ts`
+- `.GITHUB-MODE/test/enforce-trust-authorization.test.ts`
+- `.GITHUB-MODE/runtime/trust-levels.json`
+- `.GITHUB-MODE/runtime/adapter-contracts.json`
+- `.GITHUB-MODE/runtime/command-policy.json`
+- `.github/workflows/github-mode-command.yml`
+- `.github/workflows/github-mode-agent-run.yml`
+
 ---
 
 ### Task 4.3 — Policy-Gated Adapter Invocation
+
+Status: ✅ Complete.
 
 **Workstream:** WS-C
 
@@ -542,9 +695,21 @@ Status: 🟡 Designed/Scaffolded.
 - Policy failures halt execution safely.
 - Decision metadata is persisted in artifacts.
 
+**Evidence References:**
+
+- `.GITHUB-MODE/scripts/enforce-policy-gated-adapter.ts`
+- `.GITHUB-MODE/test/enforce-policy-gated-adapter.test.ts`
+- `.GITHUB-MODE/runtime/command-policy.json`
+- `.GITHUB-MODE/runtime/adapter-contracts.json`
+- `.github/workflows/github-mode-command.yml`
+- `.github/workflows/github-mode-agent-run.yml`
+- `.github/workflows/github-mode-bot-pr.yml`
+
 ---
 
 ### Task 4.4 — Provenance Metadata Embedding
+
+Status: ✅ Complete.
 
 **Workstream:** WS-G
 
@@ -555,6 +720,15 @@ Status: 🟡 Designed/Scaffolded.
 - Provenance fields present for all command outputs.
 - Metadata schema is standardized and machine-parseable.
 - Missing provenance fails validation.
+
+**Evidence References:**
+
+- `.GITHUB-MODE/scripts/validate-provenance-metadata.ts`
+- `.GITHUB-MODE/test/validate-provenance-metadata.test.ts`
+- `.GITHUB-MODE/runtime/provenance-metadata.schema.json`
+- `.GITHUB-MODE/runtime/command-policy.json`
+- `.github/workflows/github-mode-command.yml`
+- `.github/workflows/github-mode-agent-run.yml`
 
 ---
 
@@ -598,11 +772,14 @@ Status: 🟡 Designed/Scaffolded.
 
 **Workstream:** WS-D
 
-**Scope:** Implement the durable persistent-memory layer defined in `.GITHUB-MODE/docs/planning/implementation-plan.md` §2.1 so agent context survives runner teardown. Runner filesystem is never a source of truth.
+**Scope:** Implement the durable persistent-memory layer defined in `.GITHUB-MODE/docs/planning/implementation-plan.md` §2.1 so agent context survives runner teardown. Runner filesystem is never a source of truth. This builds on the existing memory system in `src/memory/` and session management in `src/sessions/`, adapting them for the stateless GitHub Actions environment with external persistence.
+
+Start with a git-backed Tier-0 adapter (issue pointer + session transcript files) inspired by `.GITHUB-MODE/docs/design/gitclaw-a-simple-example.md`, then expand to external object/KV storage adapters without breaking deterministic resume semantics.
 
 **Acceptance Criteria:**
 
-- System of record defined: primary object storage for checkpoint/event blobs, index/query database for metadata and coordination, optional projection stores as derived views.
+- Tier-0 persistence implemented for issue-native runs: `state/issues/<issueNumber>.json` pointer + `state/sessions/*.jsonl` transcript files, with explicit resume fallback when pointers/sessions are missing.
+- System of record defined for post-MVP scale: primary object storage for checkpoint/event blobs, index/query database for metadata and coordination, optional projection stores as derived views.
 - Read/write lifecycle implemented: hydrate at run start (latest snapshot + unapplied deltas), periodic checkpoints at deterministic boundaries with monotonic sequence IDs, finalize at run end (compact deltas into snapshot, record status/evidence), crash-safe fallback from previously persisted checkpoints.
 - Consistency model enforced: read-your-writes within run scope, eventual consistency across concurrent runs, `baseVersion`/`newVersion` compare-and-swap on writes, reject stale writes on version mismatch, append-only event log with periodic snapshot compaction (no silent last-write-wins).
 - Idempotency: all writes include idempotency keys (`runId` + `stepId` + `sequence`).

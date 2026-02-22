@@ -6,19 +6,19 @@
 
 <p align="center">
   <picture>
-    <img src="https://raw.githubusercontent.com/japertechnology/openclaw/main/.GITHUB-MODE/assets/logo.png" alt="OpenClaw with GitHub Mode" width="500">
+    <img src="https://raw.githubusercontent.com/japer-technology/gh-openclaw/main/.GITHUB-MODE/assets/logo.png" alt="OpenClaw with GitHub Mode" width="500">
   </picture>
 </p>
 
 <p align="center">
-  <a href="https://github.com/japertechnology/openclaw/actions/workflows/ci.yml?branch=main"><img src="https://img.shields.io/github/actions/workflow/status/japertechnology/openclaw/ci.yml?branch=main&style=for-the-badge" alt="japertechnology/openclaw CI status"></a>
+  <a href="https://github.com/japer-technology/gh-openclaw/actions/workflows/ci.yml?branch=main"><img src="https://img.shields.io/github/actions/workflow/status/japer-technology/gh-openclaw/ci.yml?branch=main&style=for-the-badge" alt="japer-technology/gh-openclaw CI status"></a>
   <a href="LICENCE.md"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
 </p>
 
 #### GitHub Mode is an additive runtime for **OpenClaw** that shifts orchestration to repository-native workflows while preserving compatibility with the installed runtime. It is designed for teams that need strict reviewability, policy boundaries, and durable runtime contracts.
 
-- GitHub-Mode Docs: https://github.com/japertechnology/openclaw/tree/main/.GITHUB-MODE/docs
-- GitHub-Mode Runtime Contracts: https://github.com/japertechnology/openclaw/tree/main/.GITHUB-MODE/runtime
+- GitHub-Mode Docs: https://github.com/japer-technology/gh-openclaw/tree/main/.GITHUB-MODE/docs
+- GitHub-Mode Runtime Contracts: https://github.com/japer-technology/gh-openclaw/tree/main/.GITHUB-MODE/runtime
 
 This is a repository wrapper is not a framework, a library, or a platform. It is a structural pattern - a way of managing files, contracts, and workflows so that a GitHub repository becomes a participant in its own infrastructure rather than a passive occupant.
 
@@ -35,20 +35,25 @@ Standard OpenClaw operation is excellent for personal/local operation. GitHub Mo
 
 If you need repeatability across contributors and repositories, GitHub Mode is the right abstraction.
 
+### gh-openclaw: daily-synced GitHub runtime extension of OpenClaw - no local install required
+
 ---
 
 ## Scope and boundaries
 
-GitHub Mode intentionally separates ownership between installed runtime and repo runtime:
+GitHub Mode runs inside a fork that contains the full OpenClaw source tree. The fork-context execution model builds and runs the openclaw runtime from `src/` to deliver the "run as if installed" experience within GitHub Actions.
 
-- Installed runtime internals stay in `src/**`.
-- GitHub Mode orchestration lives in `.github/**` and contract/runtime assets under `.GITHUB-MODE/runtime/**`.
-- GitHub Mode TypeScript runtime behavior should follow extension architecture (`extensions/github/`) instead of coupling to `src/**` internals.
+**Two layers work together:**
+
+- **Execution layer (uses src):** Workflows build openclaw from source (`pnpm install && pnpm build`) and run the actual agent engine, routing, tool policy, providers, and memory systems. This is the core "magic" — the same runtime that powers the installed experience.
+- **Governance layer (contract-driven):** Contract validation, security lint, drift detection, and policy enforcement use `.GITHUB-MODE/runtime/` contracts without importing `src/`. This adds safety and auditability on top.
+
+**Key constraint:** `.GITHUB-MODE` PRs must not modify `src/**` files. Source changes are upstream-owned and sync separately.
 
 For architecture rationale, read:
 
-- ADR 0001 Runtime Boundary and Ownership: https://github.com/openclaw/openclaw/blob/main/.GITHUB-MODE/docs/adr/0001-runtime-boundary-and-ownership.md
-- ADR 0002 Installed Runtime Non-Regression Guardrails: https://github.com/openclaw/openclaw/blob/main/.GITHUB-MODE/docs/adr/0002-installed-runtime-non-regression-guardrails.md
+- ADR 0001 Runtime Boundary and Ownership (with fork-context amendment): https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/docs/adr/0001-runtime-boundary-and-ownership.md
+- ADR 0002 Installed Runtime Non-Regression Guardrails: https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/docs/adr/0002-installed-runtime-non-regression-guardrails.md
 
 ---
 
@@ -121,8 +126,8 @@ pnpm test
 
 GitHub Mode documentation emphasizes risk-aware operation instead of informal trust assumptions.
 
-- Trigger trust and privilege expectations: https://github.com/openclaw/openclaw/blob/main/.GITHUB-MODE/docs/security/0001-github-trigger-trust-matrix.md
-- Skills quarantine pipeline: https://github.com/openclaw/openclaw/blob/main/.GITHUB-MODE/docs/security/0002-skills-quarantine-pipeline.md
+- Trigger trust and privilege expectations: https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/docs/security/0001-github-trigger-trust-matrix.md
+- Skills quarantine pipeline: https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/docs/security/0002-skills-quarantine-pipeline.md
 
 Recommended practice:
 
@@ -136,11 +141,11 @@ Recommended practice:
 
 GitHub Mode planning is staged:
 
-- MVP: https://github.com/japertechnology/openclaw/blob/main/.GITHUB-MODE/docs/planning/mvp.md
-- MVVP: https://github.com/japertechnology/openclaw/blob/main/.GITHUB-MODE/docs/planning/mvvp.md
-- MVVVP: https://github.com/japertechnology/openclaw/blob/main/.GITHUB-MODE/docs/planning/mvvvp.md
-- Implementation plan: https://github.com/japertechnology/openclaw/blob/main/.GITHUB-MODE/docs/planning/implementation-plan.md
-- Task breakdown: https://github.com/japertechnology/openclaw/blob/main/.GITHUB-MODE/docs/planning/implementation-tasks.md
+- MVP: https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/docs/planning/mvp.md
+- MVVP: https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/docs/planning/mvvp.md
+- MVVVP: https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/docs/planning/mvvvp.md
+- Implementation plan: https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/docs/planning/implementation-plan.md
+- Task breakdown: https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/docs/planning/implementation-tasks.md
 
 Use these as the canonical roadmap before introducing new architecture branches.
 
@@ -190,9 +195,9 @@ Use this GitHub Mode README when you need:
 
 ## Additional references
 
-- GitHub Mode overview: https://github.com/japertechnology/openclaw/blob/main/.GITHUB-MODE/docs/overview.md
-- The Idea: https://github.com/japertechnology/openclaw/blob/main/.GITHUB-MODE/docs/idea.md
-- Runtime contracts README: https://github.com/japertechnology/openclaw/blob/main/.GITHUB-MODE/runtime/README.md
+- GitHub Mode overview: https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/docs/overview.md
+- The Idea: https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/docs/idea.md
+- Runtime contracts README: https://github.com/japer-technology/gh-openclaw/blob/main/.GITHUB-MODE/runtime/README.md
 - OpenClaw docs portal: https://docs.openclaw.ai
 - Community Discord: https://discord.gg/clawd
 
@@ -200,4 +205,4 @@ Use this GitHub Mode README when you need:
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENCE](LICENCE.md).
