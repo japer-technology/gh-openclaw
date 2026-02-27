@@ -92,3 +92,6 @@ package-lock.json
 
 # Local iOS signing overrides
 apps/ios/LocalSigning.xcconfig
+
+# GitHub Mode (fork-only runtime extension; upstream should not track these)
+.GITHUB-MODE/
